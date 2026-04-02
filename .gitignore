@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Build
+dist/
+
+# Prisma
+prisma/migrations/
+
+# HTML proje planı dosyaları (sadece .md yeterli)
+*.html
+Thrifty_Proje_Plani_dosyalar/
+Thrifty_Proje_Plani_Ogrenci_dosyalar/

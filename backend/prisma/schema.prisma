@@ -1,0 +1,140 @@
+// Prisma schema for Thrifty - AI destekli paylasim platformu
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== ENUMS ====================
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum ItemCondition {
+  NEW
+  LIKE_NEW
+  GOOD
+  FAIR
+}
+
+enum DeliveryType {
+  PICKUP
+  DELIVERY
+  BOTH
+}
+
+enum ItemStatus {
+  ACTIVE
+  RESERVED
+  COMPLETED
+  EXPIRED
+}
+
+enum RequestStatus {
+  OPEN
+  MATCHED
+  CLOSED
+}
+
+// ==================== MODELS ====================
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  fullName     String   @map("full_name")
+  phone        String?
+  avatarUrl    String?  @map("avatar_url")
+  latitude     Float?
+  longitude    Float?
+  role         Role     @default(USER)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // İlişkiler
+  items    Item[]
+  requests Request[]
+
+  @@map("users")
+}
+
+model Category {
+  id       String  @id @default(uuid()) @db.Uuid
+  name     String  @unique
+  slug     String  @unique
+  icon     String?
+  parentId String? @map("parent_id") @db.Uuid
+
+  // Self-relation (alt kategoriler)
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryHierarchy")
+
+  // İlişkiler
+  items    Item[]
+  requests Request[]
+
+  @@map("categories")
+}
+
+model Item {
+  id           String        @id @default(uuid()) @db.Uuid
+  title        String
+  description  String
+  images       String[]
+  condition    ItemCondition @default(GOOD)
+  deliveryType DeliveryType  @default(PICKUP) @map("delivery_type")
+  status       ItemStatus    @default(ACTIVE)
+  latitude     Float
+  longitude    Float
+  address      String?
+  expiresAt    DateTime?     @map("expires_at")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  // Foreign keys
+  userId     String @map("user_id") @db.Uuid
+  categoryId String @map("category_id") @db.Uuid
+
+  // İlişkiler
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category  @relation(fields: [categoryId], references: [id])
+  requests Request[]
+
+  // İndeksler
+  @@index([userId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([latitude, longitude])
+  @@map("items")
+}
+
+model Request {
+  id          String        @id @default(uuid()) @db.Uuid
+  title       String
+  description String
+  status      RequestStatus @default(OPEN)
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  // Foreign keys
+  userId        String  @map("user_id") @db.Uuid
+  categoryId    String? @map("category_id") @db.Uuid
+  matchedItemId String? @map("matched_item_id") @db.Uuid
+
+  // İlişkiler
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category    Category? @relation(fields: [categoryId], references: [id])
+  matchedItem Item?     @relation(fields: [matchedItemId], references: [id])
+
+  // İndeksler
+  @@index([userId])
+  @@index([status])
+  @@index([categoryId])
+  @@map("requests")
+}
