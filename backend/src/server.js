@@ -59,10 +59,12 @@ app.use((err, req, res, next) => {
 });
 
 // ==================== START SERVER ====================
-app.listen(PORT, () => {
-    console.log(`\n🚀 Thrifty Backend çalışıyor: http://localhost:${PORT}`);
-    console.log(`📊 Health Check: http://localhost:${PORT}/api/health`);
-    console.log(`🌍 Ortam: ${process.env.NODE_ENV || 'development'}\n`);
-});
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+      console.log(`\n🚀 Thrifty Backend calisiyor: http://localhost:${PORT}`);
+      console.log(`📊 Health Check: http://localhost:${PORT}/api/health`);
+      console.log(`🌍 Ortam: ${process.env.NODE_ENV || 'development'}\n`);
+  });
+}
 
 module.exports = app;

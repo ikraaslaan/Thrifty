@@ -8,10 +8,11 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+    if (allowedMimeTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Sadece resim dosyalari yuklenebilir'), false);
+      cb(new Error('Sadece .jpeg, .jpg, .png ve .webp formats kabul edilmektedir.'), false);
     }
   },
 });

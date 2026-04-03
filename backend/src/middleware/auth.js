@@ -1,10 +1,9 @@
-const { createClient } = require('@supabase/supabase-js');
+const jwt = require('jsonwebtoken');
+const prisma = require('../config/database');
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl || '', supabaseKey || '');
+const JWT_SECRET = process.env.JWT_SECRET || 'super_secret';
 
-// Supabase Auth token dogrulama middleware
+// JWT token dogrulama middleware
 const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -13,21 +12,41 @@ const authenticate = async (req, res, next) => {
     }
 
     const token = authHeader.split(' ')[1];
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+    
+    // Verifying JWT
+    const decoded = jwt.verify(token, JWT_SECRET);
+    
+    // DB'den user bilgisini dogrulayip role vs ekleyebiliriz
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: { id: true, email: true, role: true }
+    });
 
-    if (error || !user) {
-      return res.status(401).json({ status: 'error', message: 'Gecersiz token' });
+    if (!user) {
+        return res.status(401).json({ status: 'error', message: 'Kullanici bulunamadi' });
     }
 
     req.user = user;
     next();
   } catch (error) {
-    console.error('Auth hatasi:', error);
-    res.status(500).json({ status: 'error', message: 'Kimlik dogrulama hatasi' });
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ status: 'error', message: 'Token suresi dolmus' });
+    }
+    res.status(401).json({ status: 'error', message: 'Gecersiz veya hatali token' });
   }
 };
 
-// Admin yetki kontrolu
+// Role kontrolu (esnek kullanim icin)
+const checkRole = (allowedRoles) => {
+  return (req, res, next) => {
+    if (!allowedRoles.includes(req.user?.role)) {
+      return res.status(403).json({ status: 'error', message: 'Yetkiniz yok' });
+    }
+    next();
+  };
+};
+
+// Default admin check (Eski controller ile geriye donuk uyumluluk)
 const requireAdmin = (req, res, next) => {
   if (req.user?.role !== 'ADMIN') {
     return res.status(403).json({ status: 'error', message: 'Yetkiniz yok' });
@@ -35,4 +54,4 @@ const requireAdmin = (req, res, next) => {
   next();
 };
 
-module.exports = { authenticate, requireAdmin, supabase };
+module.exports = { authenticate, checkRole, requireAdmin };

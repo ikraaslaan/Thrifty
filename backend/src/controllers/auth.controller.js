@@ -1,4 +1,4 @@
-const { supabase } = require('../middleware/auth');
+const { registerUser, loginUser } = require('../services/auth.service');
 const prisma = require('../config/database');
 
 // POST /api/auth/register
@@ -6,37 +6,20 @@ const register = async (req, res) => {
   try {
     const { email, password, fullName, phone } = req.body;
 
-    // Supabase Auth ile kullanici olustur
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: fullName } },
-    });
-
-    if (error) {
-      return res.status(400).json({ status: 'error', message: error.message });
-    }
-
-    // Prisma'da kullanici kaydini olustur
-    const user = await prisma.user.create({
-      data: {
-        id: data.user.id,
-        email,
-        passwordHash: 'supabase-managed',
-        fullName,
-        phone: phone || null,
-      },
-    });
+    const { user, token } = await registerUser({ email, password, fullName, phone });
 
     res.status(201).json({
       status: 'success',
       message: 'Kayit basarili',
       data: {
-        user: { id: user.id, email: user.email, fullName: user.fullName },
-        session: data.session,
+        user,
+        token,
       },
     });
   } catch (error) {
+    if (error.message.includes('zaten kayitli')) {
+      return res.status(400).json({ status: 'error', message: error.message });
+    }
     console.error('Register hatasi:', error);
     res.status(500).json({ status: 'error', message: 'Kayit sirasinda hata olustu' });
   }
@@ -47,23 +30,19 @@ const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-
-    if (error) {
-      return res.status(401).json({ status: 'error', message: 'Email veya sifre hatali' });
-    }
-
-    // Prisma'dan kullanici bilgilerini al
-    const user = await prisma.user.findUnique({ where: { email } });
+    const { user, token } = await loginUser(email, password);
 
     res.json({
       status: 'success',
       data: {
-        user: user ? { id: user.id, email: user.email, fullName: user.fullName, role: user.role } : null,
-        session: data.session,
+        user,
+        token,
       },
     });
   } catch (error) {
+    if (error.message.includes('Gecersiz email veya sifre')) {
+      return res.status(401).json({ status: 'error', message: error.message });
+    }
     console.error('Login hatasi:', error);
     res.status(500).json({ status: 'error', message: 'Giris sirasinda hata olustu' });
   }
@@ -72,10 +51,8 @@ const login = async (req, res) => {
 // POST /api/auth/logout
 const logout = async (req, res) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (token) {
-      await supabase.auth.signOut(token);
-    }
+    // Client tarafinda token silinecegi icin burada islem yapilmayabilir.
+    // Ancak ileride token kara liste (blacklist) islemleri yapilmak istenirse buraya eklenebilir.
     res.json({ status: 'success', message: 'Cikis yapildi' });
   } catch (error) {
     res.status(500).json({ status: 'error', message: 'Cikis hatasi' });
