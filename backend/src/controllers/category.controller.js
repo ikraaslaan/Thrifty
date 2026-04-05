@@ -1,17 +1,9 @@
-const prisma = require('../config/database');
+const categoryService = require('../services/category.service');
 
 // GET /api/categories - Tum kategorileri listele
 const getCategories = async (req, res) => {
   try {
-    const categories = await prisma.category.findMany({
-      include: {
-        children: true,
-        _count: { select: { items: true } },
-      },
-      where: { parentId: null }, // Sadece ust kategoriler
-      orderBy: { name: 'asc' },
-    });
-
+    const categories = await categoryService.getAllCategories();
     res.json({ status: 'success', data: categories });
   } catch (error) {
     console.error('getCategories hatasi:', error);
@@ -22,18 +14,7 @@ const getCategories = async (req, res) => {
 // GET /api/categories/:id - Kategori detayi ve ilanlari
 const getCategory = async (req, res) => {
   try {
-    const category = await prisma.category.findUnique({
-      where: { id: req.params.id },
-      include: {
-        children: true,
-        items: {
-          where: { status: 'ACTIVE' },
-          take: 20,
-          orderBy: { createdAt: 'desc' },
-          include: { user: { select: { id: true, fullName: true } } },
-        },
-      },
-    });
+    const category = await categoryService.getCategoryById(req.params.id);
 
     if (!category) {
       return res.status(404).json({ status: 'error', message: 'Kategori bulunamadi' });
