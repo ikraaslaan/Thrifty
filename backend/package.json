@@ -23,6 +23,7 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@prisma/client": "^5.22.0",
     "bcrypt": "^6.0.0",
     "cloudinary": "^2.9.0",
