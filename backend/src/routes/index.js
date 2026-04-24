@@ -15,6 +15,7 @@ router.get('/', (req, res) => {
       requests: '/api/requests (create, list, match)',
       users: '/api/users (profile, items)',
       upload: '/api/upload (single, multiple)',
+      ai: '/api/ai (recommendations)',
     },
   });
 });
@@ -26,5 +27,6 @@ router.use('/categories', require('./category.routes'));
 router.use('/requests', require('./request.routes'));
 router.use('/users', require('./user.routes'));
 router.use('/upload', require('./upload.routes'));
+router.use('/ai', require('./ai.routes'));
 
 module.exports = router;
