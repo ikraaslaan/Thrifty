@@ -1,0 +1,84 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", ui-serif, Georgia, serif;
+  
+  /* Siyah YASAK, çok koyu kahve kullanıyoruz */
+  --color-ink-dark: #4A3B32;
+  --color-ink-light: #7A6F68;
+
+  --color-paper: #F7F4F0;
+  --color-paper-light: #FFFFFF;
+  
+  --color-artisan-orange: #E05D3A;
+  --color-artisan-orange-dark: #C94A28;
+  
+  --color-artisan-sage: #82A284;
+  --color-artisan-sage-dark: #668868;
+  
+  --color-artisan-earth: #C27E67;
+}
+
+@layer utilities {
+  .emboss-card {
+    background-color: var(--color-paper-light);
+    border-radius: 1.5rem;
+    /* Hafif bir kağıt kabartması */
+    box-shadow: 
+      0 4px 6px -1px rgba(74, 59, 50, 0.05),
+      0 2px 4px -1px rgba(74, 59, 50, 0.03),
+      inset 0 1px 0 rgba(255, 255, 255, 1);
+    border: 1px solid rgba(74, 59, 50, 0.08);
+  }
+
+  .tactile-input {
+    background-color: transparent;
+    border: none;
+    border-bottom: 2px solid rgba(74, 59, 50, 0.15);
+    border-radius: 0;
+    transition: all 0.3s ease;
+  }
+  .tactile-input:focus {
+    outline: none;
+    border-bottom-color: var(--color-artisan-orange);
+    background-color: rgba(224, 93, 58, 0.02);
+  }
+
+  .tactile-btn {
+    @apply font-sans font-medium transition-all duration-200;
+    border-radius: 9999px; /* Tam yuvarlak (pill) */
+    /* Fiziksel tuş hissi (üstten ışık, alttan gölge) */
+    box-shadow: 
+      0 4px 6px -1px rgba(224, 93, 58, 0.2), 
+      0 2px 4px -1px rgba(224, 93, 58, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+  .tactile-btn:active {
+    transform: scale(0.97);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+  }
+}
+
+body {
+  background-color: var(--color-paper);
+  color: var(--color-ink-dark);
+  position: relative;
+  min-height: 100vh;
+}
+
+/* Grainy / Noise Texture Overlay */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0.08;
+  /* SVG base64 noise for paper texture */
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
