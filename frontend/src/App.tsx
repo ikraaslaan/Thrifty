@@ -1,7 +1,10 @@
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import RegisterPage from './pages/RegisterPage';
 import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
+import SharePage from './pages/SharePage';
+import ProfilePage from './pages/ProfilePage';
 import Navbar from './components/Navbar';
 import { useAuthStore } from './stores/useAuthStore';
 
@@ -47,16 +50,26 @@ function App() {
           }
         />
 
-        {/* Korumalı sayfalar (ileride eklenecek) */}
+        {/* Paylaş sayfası (Yeni İlan veya Düzenleme Modu) */}
         <Route
-          path="/donate"
+          path="/paylas"
           element={
             <PrivateRoute
               element={
                 <Layout>
-                  <div className="pt-24 flex items-center justify-center min-h-screen">
-                    <p className="font-serif text-2xl text-ink-dark">Bağış formu yakında geliyor...</p>
-                  </div>
+                  <SharePage />
+                </Layout>
+              }
+            />
+          }
+        />
+        <Route
+          path="/paylas/:id"
+          element={
+            <PrivateRoute
+              element={
+                <Layout>
+                  <SharePage />
                 </Layout>
               }
             />
@@ -68,9 +81,7 @@ function App() {
             <PrivateRoute
               element={
                 <Layout>
-                  <div className="pt-24 flex items-center justify-center min-h-screen">
-                    <p className="font-serif text-2xl text-ink-dark">Profil sayfası yakında geliyor...</p>
-                  </div>
+                  <ProfilePage />
                 </Layout>
               }
             />

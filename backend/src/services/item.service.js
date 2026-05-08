@@ -65,6 +65,16 @@ class ItemService {
         });
     }
 
+    async getItemsByUserId(userId) {
+        return await prisma.item.findMany({
+            where: { userId },
+            include: {
+                category: { select: { id: true, name: true, slug: true, icon: true } },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+    }
+
     async createItem(userId, data) {
         const { title, description, images, condition, deliveryType, latitude, longitude, address, categoryId, expiresAt } = data;
 

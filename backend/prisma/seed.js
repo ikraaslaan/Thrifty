@@ -25,26 +25,94 @@ async function main() {
 
   console.log(`👤 Kullanıcı hazır: ${seedUser.email}`);
 
-  // 2. Örnek Kategoriler Oluştur
-  const categoriesData = [
-    { name: 'Elektronik', slug: 'elektronik', icon: '💻' },
-    { name: 'Ev Eşyaları', slug: 'ev-esyalari', icon: '🛋️' },
-    { name: 'Giyim', slug: 'giyim', icon: '👕' },
-    { name: 'Kitap & Eğlence', slug: 'kitap-eglence', icon: '📚' },
-    { name: 'Spor & Outdoor', slug: 'spor-outdoor', icon: '⛺' }
+  // 2. Ana Kategoriler ve Alt Kategoriler Oluştur
+  const mainCategoriesData = [
+    { name: 'Elektronik',               slug: 'elektronik',               icon: '💻' },
+    { name: 'Ev & Yaşam',               slug: 'ev-yasam',                 icon: '🛋️' },
+    { name: 'Gıda',                     slug: 'gida',                     icon: '🥗' },
+    { name: 'Kırtasiye',                slug: 'kirtasiye',                icon: '📚' },
+    { name: 'Giyim & Aksesuar',         slug: 'giyim-aksesuar',           icon: '👕' },
+    { name: 'Anne & Bebek & Oyuncak',   slug: 'anne-bebek-oyuncak',       icon: '🍼' },
+    { name: 'Pet Shop',                 slug: 'pet-shop',                 icon: '🐾' },
   ];
 
-  const createdCategories = [];
-  for (const cat of categoriesData) {
+  const subCategoriesData = [
+    // Elektronik
+    { name: 'Beyaz Eşya',         slug: 'beyaz-esya',          icon: '🫧',  parentSlug: 'elektronik' },
+    { name: 'Ev Aletleri',        slug: 'ev-aletleri',         icon: '🔌',  parentSlug: 'elektronik' },
+    { name: 'TV, Görüntü & Ses',  slug: 'tv-goruntu-ses',      icon: '📺',  parentSlug: 'elektronik' },
+    { name: 'Kamera',             slug: 'kamera',              icon: '📷',  parentSlug: 'elektronik' },
+    { name: 'Telefon',            slug: 'telefon',             icon: '📱',  parentSlug: 'elektronik' },
+    { name: 'Tablet',             slug: 'tablet',              icon: '📲',  parentSlug: 'elektronik' },
+    { name: 'Bilgisayar',         slug: 'bilgisayar',          icon: '🖥️',  parentSlug: 'elektronik' },
+    // Ev & Yaşam
+    { name: 'Mobilya',            slug: 'mobilya',             icon: '🪑',  parentSlug: 'ev-yasam' },
+    { name: 'Mutfak Gereçleri',   slug: 'mutfak-gerecleri',    icon: '🍳',  parentSlug: 'ev-yasam' },
+    { name: 'Dekorasyon',         slug: 'dekorasyon',          icon: '🖼️',  parentSlug: 'ev-yasam' },
+    { name: 'Aydınlatma',         slug: 'aydinlatma',          icon: '💡',  parentSlug: 'ev-yasam' },
+    { name: 'Ev Gereçleri',       slug: 'ev-gerecleri',        icon: '🧹',  parentSlug: 'ev-yasam' },
+    // Gıda
+    { name: 'Unlu Mamüller',      slug: 'unlu-mamuller',       icon: '🍞',  parentSlug: 'gida' },
+    { name: 'Beyaz Et & Kırmızı Et', slug: 'et-urunleri',     icon: '🥩',  parentSlug: 'gida' },
+    { name: 'Vegan',              slug: 'vegan',               icon: '🥦',  parentSlug: 'gida' },
+    { name: 'Bakliyat',           slug: 'bakliyat',            icon: '🫘',  parentSlug: 'gida' },
+    { name: 'Süt Ürünleri',       slug: 'sut-urunleri',        icon: '🥛',  parentSlug: 'gida' },
+    // Kırtasiye
+    { name: 'Kitap',              slug: 'kitap',               icon: '📖',  parentSlug: 'kirtasiye' },
+    { name: 'Test Kitabı',        slug: 'test-kitabi',         icon: '📝',  parentSlug: 'kirtasiye' },
+    { name: 'Kırtasiye Araçları', slug: 'kirtasiye-araclari',  icon: '✏️',  parentSlug: 'kirtasiye' },
+    // Giyim & Aksesuar
+    { name: 'Kadın',              slug: 'kadin',               icon: '👗',  parentSlug: 'giyim-aksesuar' },
+    { name: 'Erkek',              slug: 'erkek',               icon: '👔',  parentSlug: 'giyim-aksesuar' },
+    { name: 'Çocuk',              slug: 'cocuk',               icon: '🧒',  parentSlug: 'giyim-aksesuar' },
+    // Anne & Bebek & Oyuncak
+    { name: 'Bebek Arabası',      slug: 'bebek-arabasi',       icon: '🛒',  parentSlug: 'anne-bebek-oyuncak' },
+    { name: 'Oyuncak',            slug: 'oyuncak',             icon: '🪀',  parentSlug: 'anne-bebek-oyuncak' },
+    { name: 'Bebek Araç Gereçleri', slug: 'bebek-arac-gerecleri', icon: '🍼', parentSlug: 'anne-bebek-oyuncak' },
+    { name: 'Bebek Mobilyası',    slug: 'bebek-mobilyasi',     icon: '🛏️',  parentSlug: 'anne-bebek-oyuncak' },
+    { name: 'Anne Bebek Bakım',   slug: 'anne-bebek-bakim',    icon: '🧴',  parentSlug: 'anne-bebek-oyuncak' },
+    // Pet Shop
+    { name: 'Balık Ürünleri',     slug: 'balik-urunleri',      icon: '🐟',  parentSlug: 'pet-shop' },
+    { name: 'Kedi Ürünleri',      slug: 'kedi-urunleri',       icon: '🐱',  parentSlug: 'pet-shop' },
+    { name: 'Kuş Ürünleri',       slug: 'kus-urunleri',        icon: '🐦',  parentSlug: 'pet-shop' },
+    { name: 'Köpek Ürünleri',     slug: 'kopek-urunleri',      icon: '🐶',  parentSlug: 'pet-shop' },
+    { name: 'Diğer Evcil Hayvan', slug: 'diger-evcil-hayvan',  icon: '🐾',  parentSlug: 'pet-shop' },
+  ];
+
+  // Ana kategorileri oluştur
+  const createdCategories = {};
+  for (const cat of mainCategoriesData) {
     const category = await prisma.category.upsert({
       where: { slug: cat.slug },
       update: {},
-      create: cat,
+      create: { name: cat.name, slug: cat.slug, icon: cat.icon },
     });
-    createdCategories.push(category);
+    createdCategories[cat.slug] = category;
   }
-  
-  console.log(`📁 ${createdCategories.length} kategori hazır.`);
+  console.log(`📁 ${mainCategoriesData.length} ana kategori hazır.`);
+
+  // Alt kategorileri oluştur
+  let subCount = 0;
+  for (const sub of subCategoriesData) {
+    const parent = createdCategories[sub.parentSlug];
+    if (!parent) continue;
+    await prisma.category.upsert({
+      where: { slug: sub.slug },
+      update: {},
+      create: { name: sub.name, slug: sub.slug, icon: sub.icon, parentId: parent.id },
+    });
+    subCount++;
+  }
+  console.log(`📂 ${subCount} alt kategori hazır.`);
+
+  // seed itemleri için eski kategori referansını uyumlu hale getir (ev-esyalari -> ev-yasam)
+  const createdCategoriesCompat = {
+    ...createdCategories,
+    'ev-esyalari': createdCategories['ev-yasam'],
+    'kitap-eglence': createdCategories['kirtasiye'],
+    'giyim': createdCategories['giyim-aksesuar'],
+    'spor-outdoor': createdCategories['elektronik'],
+  };
 
   // 3. Örnek İlanlar (Items) Oluştur
   const itemsData = [
@@ -57,7 +125,7 @@ async function main() {
       latitude: 41.01,
       longitude: 28.98,
       address: 'Beşiktaş, İstanbul',
-      categoryId: createdCategories.find(c => c.slug === 'ev-esyalari').id,
+      categoryId: createdCategoriesCompat['ev-esyalari'].id,
     },
     {
       title: 'Logitech Kablosuz Mouse',
@@ -68,7 +136,7 @@ async function main() {
       latitude: 41.02,
       longitude: 29.00,
       address: 'Üsküdar, İstanbul',
-      categoryId: createdCategories.find(c => c.slug === 'elektronik').id,
+      categoryId: createdCategoriesCompat['elektronik'].id,
     },
     {
       title: 'İngilizce Fantastik Roman Seti (5 Kitap)',
@@ -79,7 +147,7 @@ async function main() {
       latitude: 41.03,
       longitude: 28.98,
       address: 'Şişli, İstanbul',
-      categoryId: createdCategories.find(c => c.slug === 'kitap-eglence').id,
+      categoryId: createdCategoriesCompat['kitap-eglence'].id,
     },
     {
       title: 'Kışlık Kalın Mont (Erkek L Beden)',
@@ -90,7 +158,7 @@ async function main() {
       latitude: 40.98,
       longitude: 29.02,
       address: 'Kadıköy, İstanbul',
-      categoryId: createdCategories.find(c => c.slug === 'giyim').id,
+      categoryId: createdCategoriesCompat['giyim'].id,
     },
     {
       title: '4 Kişilik Kamp Çadırı',
@@ -101,7 +169,7 @@ async function main() {
       latitude: 41.05,
       longitude: 29.01,
       address: 'Levent, İstanbul',
-      categoryId: createdCategories.find(c => c.slug === 'spor-outdoor').id,
+      categoryId: createdCategoriesCompat['spor-outdoor'].id,
     },
     {
       title: '24 inç Oyuncu Monitörü (Arızalı)',
@@ -112,7 +180,7 @@ async function main() {
       latitude: 41.00,
       longitude: 28.95,
       address: 'Fatih, İstanbul',
-      categoryId: createdCategories.find(c => c.slug === 'elektronik').id,
+      categoryId: createdCategoriesCompat['elektronik'].id,
     }
   ];
 

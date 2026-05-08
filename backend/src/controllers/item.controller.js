@@ -15,6 +15,17 @@ const getItems = async (req, res) => {
   }
 };
 
+// GET /api/items/me - Kullanıcının kendi ilanları
+const getMyItems = async (req, res) => {
+  try {
+    const items = await itemService.getItemsByUserId(req.user.id);
+    res.json({ status: 'success', data: items });
+  } catch (error) {
+    console.error('getMyItems hatasi:', error);
+    res.status(500).json({ status: 'error', message: 'Ilanlariniz alinamadi' });
+  }
+};
+
 // GET /api/items/:id - Ilan detayi
 const getItem = async (req, res) => {
   try {
@@ -74,4 +85,4 @@ const deleteItem = async (req, res) => {
   }
 };
 
-module.exports = { getItems, getItem, createItem, updateItem, deleteItem };
+module.exports = { getItems, getMyItems, getItem, createItem, updateItem, deleteItem };
