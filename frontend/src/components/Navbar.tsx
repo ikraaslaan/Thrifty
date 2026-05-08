@@ -5,7 +5,7 @@ import {
   MapPin,
   User,
   LogIn,
-  Gift,
+  Share2,
   ChevronDown,
   X,
 } from 'lucide-react';
@@ -37,7 +37,7 @@ const Navbar = () => {
   const handleLogout = () => {
     logout();
     setProfileOpen(false);
-    navigate('/login');
+    navigate('/');
   };
 
   return (
@@ -185,30 +185,47 @@ const Navbar = () => {
             {/* ── RIGHT: Auth State ── */}
             <div className="flex-shrink-0 flex items-center gap-2">
 
-              {!isAuthenticated ? (
-                /* Public: Giriş Yap */
+              {/* Sadece üye olanlar Paylaş butonunu görür */}
+              {isAuthenticated && (
                 <Link
-                  to="/login"
-                  id="navbar-login-btn"
+                  to="/paylas"
+                  id="navbar-share-btn"
                   className="tactile-btn flex items-center gap-2 px-4 py-2 text-sm text-white"
-                  style={{ background: 'var(--color-ink-dark)' }}
+                  style={{ background: 'var(--color-artisan-orange)' }}
                 >
-                  <LogIn size={15} />
-                  <span className="hidden sm:inline">Giriş Yap</span>
+                  <Share2 size={15} />
+                  <span className="hidden sm:inline">Paylaş</span>
                 </Link>
-              ) : (
-                /* Auth: Bağış Yap + Profil */
-                <>
-                  <Link
-                    to="/donate"
-                    id="navbar-donate-btn"
-                    className="tactile-btn flex items-center gap-2 px-4 py-2 text-sm text-white"
-                    style={{ background: 'var(--color-artisan-orange)' }}
-                  >
-                    <Gift size={15} />
-                    <span className="hidden sm:inline">Bağış Yap</span>
-                  </Link>
+              )}
 
+              {!isAuthenticated ? (
+                /* Public: Giriş Yap ve Kaydol */
+                <div className="flex items-center gap-2">
+                  <Link
+                    to="/login"
+                    id="navbar-login-btn"
+                    className="tactile-btn flex items-center gap-2 px-4 py-2 text-sm text-white"
+                    style={{ background: 'var(--color-ink-dark)' }}
+                  >
+                    <LogIn size={15} />
+                    <span className="hidden sm:inline">Giriş Yap</span>
+                  </Link>
+                  <Link
+                    to="/register"
+                    id="navbar-register-btn"
+                    className="tactile-btn flex items-center gap-2 px-4 py-2 text-sm"
+                    style={{ 
+                      background: 'rgba(74,59,50,0.05)', 
+                      color: 'var(--color-ink-dark)',
+                      border: '1px solid rgba(74,59,50,0.1)'
+                    }}
+                  >
+                    <span className="hidden sm:inline">Kaydol</span>
+                  </Link>
+                </div>
+              ) : (
+                /* Auth: Profil dropdown */
+                <>
                   {/* Profile dropdown */}
                   <div className="relative">
                     <button
@@ -277,6 +294,7 @@ const Navbar = () => {
                   </div>
                 </>
               )}
+
             </div>
           </div>
         </div>
