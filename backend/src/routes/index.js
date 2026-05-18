@@ -28,5 +28,6 @@ router.use('/requests', require('./request.routes'));
 router.use('/users', require('./user.routes'));
 router.use('/upload', require('./upload.routes'));
 router.use('/ai', require('./ai.routes'));
+router.use('/applications', require('./application.routes'));
 
 module.exports = router;
