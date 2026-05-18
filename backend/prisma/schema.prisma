@@ -42,6 +42,11 @@ enum RequestStatus {
   CLOSED
 }
 
+enum ApplicationStatus {
+  PENDING
+  WITHDRAWN
+}
+
 // ==================== MODELS ====================
 
 model User {
@@ -60,8 +65,9 @@ model User {
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   // İlişkiler
-  items    Item[]
-  requests Request[]
+  items        Item[]
+  requests     Request[]
+  applications ItemApplication[]
 
   @@map("users")
 }
@@ -104,9 +110,10 @@ model Item {
   categoryId String @map("category_id") @db.Uuid
 
   // İlişkiler
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category Category  @relation(fields: [categoryId], references: [id])
-  requests Request[]
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category     Category        @relation(fields: [categoryId], references: [id])
+  requests     Request[]
+  applications ItemApplication[]
 
   // İndeksler
   @@index([userId])
@@ -139,4 +146,26 @@ model Request {
   @@index([status])
   @@index([categoryId])
   @@map("requests")
+}
+
+model ItemApplication {
+  id        String            @id @default(uuid()) @db.Uuid
+  note      String?
+  status    ApplicationStatus @default(PENDING)
+  createdAt DateTime          @default(now()) @map("created_at")
+  updatedAt DateTime          @updatedAt @map("updated_at")
+
+  // Foreign keys
+  userId String @map("user_id") @db.Uuid
+  itemId String @map("item_id") @db.Uuid
+
+  // İlişkiler
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  // Bir kullanıcı aynı ilana sadece bir kez talip olabilir
+  @@unique([userId, itemId])
+  @@index([userId])
+  @@index([itemId])
+  @@map("item_applications")
 }
