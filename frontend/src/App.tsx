@@ -5,9 +5,9 @@ import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
 import SharePage from './pages/SharePage';
 import ProfilePage from './pages/ProfilePage';
+import ListingDetailPage from './pages/ListingDetailPage';
 import Navbar from './components/Navbar';
 import { useAuthStore } from './stores/useAuthStore';
-
 // Layout: Navbar + sayfa içeriği (auth gerektirmeyen sayfalarda da navbar göster)
 function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -46,6 +46,16 @@ function App() {
           element={
             <Layout>
               <HomePage />
+            </Layout>
+          }
+        />
+
+        {/* İlan Detay Sayfası — Navbar var, herkese açık */}
+        <Route
+          path="/ilan/:id"
+          element={
+            <Layout>
+              <ListingDetailPage />
             </Layout>
           }
         />
