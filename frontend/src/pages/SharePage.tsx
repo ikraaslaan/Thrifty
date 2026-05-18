@@ -524,16 +524,16 @@ const SharePage = () => {
                   name="description"
                   value={form.description}
                   onChange={handleChange}
-                  placeholder="Ürün hakkında detaylı bilgi verin. Durumu, marka/model, neden paylaşıyorsunuz..."
+                  placeholder="Ürün hakkında kısa ve samimi bilgi verin. Durumu, marka/model, neden paylaşıyorsunuz... (Maksimum 250 karakter)"
                   rows={4}
                   style={{ ...inputStyle, resize: 'vertical', minHeight: '110px' }}
-                  maxLength={1000}
+                  maxLength={250}
                 />
                 <p
                   className="mt-1 text-right text-xs"
                   style={{ color: 'var(--color-ink-light)' }}
                 >
-                  {form.description.length}/1000
+                  {form.description.length}/250
                 </p>
               </div>
 

@@ -18,11 +18,22 @@ class ApiError extends Error {
 
 class ItemService {
     async getItems(query) {
-        const { page = 1, limit = 20, category, status = 'ACTIVE', lat, lng, radius } = query;
+        const { page = 1, limit = 20, category, condition, status = 'ACTIVE', lat, lng, radius } = query;
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
         const where = { status };
-        if (category) where.categoryId = category;
+        if (category) {
+            // Ana kategori seçildiğinde alt kategorileri de dahil et
+            const subCategories = await prisma.category.findMany({
+                where: { parentId: category },
+                select: { id: true }
+            });
+            const categoryIds = [category, ...subCategories.map(c => c.id)];
+            where.categoryId = { in: categoryIds };
+        }
+        if (condition) {
+            where.condition = condition;
+        }
 
         const items = await prisma.item.findMany({
             where,
