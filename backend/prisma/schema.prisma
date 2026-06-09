@@ -45,6 +45,8 @@ enum RequestStatus {
 enum ApplicationStatus {
   PENDING
   WITHDRAWN
+  APPROVED
+  REJECTED
 }
 
 // ==================== MODELS ====================
@@ -68,6 +70,7 @@ model User {
   items        Item[]
   requests     Request[]
   applications ItemApplication[]
+  notifications Notification[]
 
   @@map("users")
 }
@@ -152,8 +155,11 @@ model ItemApplication {
   id        String            @id @default(uuid()) @db.Uuid
   note      String?
   status    ApplicationStatus @default(PENDING)
-  createdAt DateTime          @default(now()) @map("created_at")
-  updatedAt DateTime          @updatedAt @map("updated_at")
+  isRated   Boolean           @default(false) @map("is_rated")
+  rating        Int?
+  reviewComment String?           @map("review_comment")
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
 
   // Foreign keys
   userId String @map("user_id") @db.Uuid
@@ -168,4 +174,19 @@ model ItemApplication {
   @@index([userId])
   @@index([itemId])
   @@map("item_applications")
+}
+
+model Notification {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  title     String
+  message   String
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // İlişkiler
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("notifications")
 }
