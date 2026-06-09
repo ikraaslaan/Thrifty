@@ -10,6 +10,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import axiosClient from '../api/axiosClient';
+import { TURKEY_CITIES, TURKEY_CITY_LIST } from '../data/turkeyCities';
 
 // ─── Tip Tanımları ───────────────────────────────────────────────────────────
 
@@ -73,6 +74,103 @@ const inputStyle: React.CSSProperties = {
   transition: 'border-color 0.2s',
 };
 
+const SearchableSelect = ({
+  label,
+  placeholder,
+  value,
+  options,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  placeholder: string;
+  value: string;
+  options: string[];
+  onChange: (val: string) => void;
+  disabled?: boolean;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setSearch(value);
+  }, [value]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+        setSearch(value);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [value]);
+
+  const filteredOptions = options.filter(opt =>
+    opt.toLocaleLowerCase('tr-TR').includes(search.toLocaleLowerCase('tr-TR'))
+  );
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      <FormLabel required>{label}</FormLabel>
+      <div className="relative">
+        <input
+          type="text"
+          value={search}
+          disabled={disabled}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setIsOpen(true);
+          }}
+          onFocus={() => !disabled && setIsOpen(true)}
+          placeholder={placeholder}
+          style={{
+            ...inputStyle,
+            opacity: disabled ? 0.5 : 1,
+            paddingRight: '36px',
+          }}
+        />
+        <ChevronDown
+          size={16}
+          className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-ink-light"
+          style={{ color: 'var(--color-ink-light)' }}
+        />
+      </div>
+
+      {isOpen && !disabled && (
+        <ul
+          className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1"
+          style={{ fontFamily: 'var(--font-sans)', border: '1px solid rgba(74,59,50,0.08)' }}
+        >
+          {filteredOptions.length === 0 ? (
+            <li className="px-4 py-2 text-xs text-gray-500">Sonuç bulunamadı</li>
+          ) : (
+            filteredOptions.map((opt) => (
+              <li
+                key={opt}
+                onClick={() => {
+                  onChange(opt);
+                  setSearch(opt);
+                  setIsOpen(false);
+                }}
+                className={`px-4 py-2 text-sm cursor-pointer transition-colors ${
+                  opt === value
+                    ? 'bg-orange-50 text-artisan-orange font-semibold'
+                    : 'hover:bg-gray-50 text-ink-dark'
+                }`}
+              >
+                {opt}
+              </li>
+            ))
+          )}
+        </ul>
+      )}
+    </div>
+  );
+};
+
 // ─── Ana Bileşen ──────────────────────────────────────────────────────────────
 
 const SharePage = () => {
@@ -100,10 +198,12 @@ const SharePage = () => {
     expiresAt: '',
   });
 
+  const [selectedCity, setSelectedCity] = useState('');
+  const [selectedDistrict, setSelectedDistrict] = useState('');
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  const [loadingEdit, setLoadingEdit] = useState(!!id); // ID varsa başlangıçta yükleniyor
 
   // ── Kategorileri çek — API zaten children ile birlikte döndürüyor ──
   useEffect(() => {
@@ -172,6 +272,16 @@ const SharePage = () => {
             expiresAt: item.expiresAt ? new Date(item.expiresAt).toISOString().split('T')[0] : '',
           });
 
+          if (item.address) {
+            const parts = item.address.split(',').map((p: string) => p.trim());
+            if (parts.length >= 2) {
+              setSelectedDistrict(parts[0]);
+              setSelectedCity(parts[1]);
+            } else if (parts.length === 1) {
+              setSelectedCity(parts[0]);
+            }
+          }
+
           // Mevcut resimleri previews olarak ekle (eski resimler URL olarak kalacak)
           if (item.images && item.images.length > 0) {
             setPreviews(item.images);
@@ -179,8 +289,6 @@ const SharePage = () => {
         }
       } catch (err) {
         setError('İlan bilgileri alınamadı.');
-      } finally {
-        setLoadingEdit(false);
       }
     };
     fetchItem();
@@ -588,17 +696,33 @@ const SharePage = () => {
                 </div>
               </div>
 
-              {/* Konum */}
-              <div className="mb-5">
-                <FormLabel required>Konum</FormLabel>
-                <input
-                  id="share-address"
-                  type="text"
-                  name="address"
-                  value={form.address}
-                  onChange={handleChange}
-                  placeholder="İlçe, Şehir (örn. Kadıköy, İstanbul)"
-                  style={inputStyle}
+              {/* Konum (İl/İlçe) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5">
+                <SearchableSelect
+                  label="İl"
+                  placeholder="İl seçin veya arayın..."
+                  value={selectedCity}
+                  options={TURKEY_CITY_LIST}
+                  onChange={(city) => {
+                    setSelectedCity(city);
+                    setSelectedDistrict('');
+                    setForm((prev) => ({ ...prev, address: city ? `, ${city}` : '' }));
+                  }}
+                />
+
+                <SearchableSelect
+                  label="İlçe"
+                  placeholder="İlçe seçin veya arayın..."
+                  value={selectedDistrict}
+                  options={selectedCity ? TURKEY_CITIES[selectedCity] ?? [] : []}
+                  disabled={!selectedCity}
+                  onChange={(district) => {
+                    setSelectedDistrict(district);
+                    setForm((prev) => ({
+                      ...prev,
+                      address: district && selectedCity ? `${district}, ${selectedCity}` : selectedCity,
+                    }));
+                  }}
                 />
               </div>
 

@@ -6,8 +6,23 @@ const {
   getItemApplications,
   checkApplication,
   withdrawApplication,
+  approveApplication,
+  rejectApplication,
+  completeApplication,
+  rateApplication,
+  cancelDelivery,
+  getHistoryBought,
+  getHistoryShared,
+  getMyReviews,
+  getUserReviews,
 } = require('../controllers/application.controller');
 const { authenticate } = require('../middleware/auth');
+
+// Geçmiş işlemler
+router.get('/history/bought', authenticate, getHistoryBought);
+router.get('/history/shared', authenticate, getHistoryShared);
+router.get('/reviews/me', authenticate, getMyReviews);
+router.get('/reviews/user/:userId', authenticate, getUserReviews);
 
 // Talip olduğum ilanlar
 router.get('/mine', authenticate, getMyApplications);
@@ -23,5 +38,20 @@ router.post('/', authenticate, createApplication);
 
 // Talebi geri çek
 router.delete('/:id', authenticate, withdrawApplication);
+
+// Talebi onaylama
+router.patch('/:id/approve', authenticate, approveApplication);
+
+// Talebi reddetme
+router.patch('/:id/reject', authenticate, rejectApplication);
+
+// Teslimatı tamamlama
+router.patch('/:id/complete', authenticate, completeApplication);
+
+// Puanlama
+router.patch('/:id/rate', authenticate, rateApplication);
+
+// Teslimat iptali
+router.patch('/:id/cancel-delivery', authenticate, cancelDelivery);
 
 module.exports = router;

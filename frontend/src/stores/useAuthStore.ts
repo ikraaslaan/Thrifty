@@ -8,6 +8,8 @@ interface User {
   role?: string;
   latitude?: number;
   longitude?: number;
+  rating?: number;
+  ratingCount?: number;
 }
 
 interface AuthState {

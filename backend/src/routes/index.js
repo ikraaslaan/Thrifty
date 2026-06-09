@@ -29,5 +29,6 @@ router.use('/users', require('./user.routes'));
 router.use('/upload', require('./upload.routes'));
 router.use('/ai', require('./ai.routes'));
 router.use('/applications', require('./application.routes'));
+router.use('/notifications', require('./notification.routes'));
 
 module.exports = router;
