@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '../stores/useAuthStore';
 import axiosClient from '../api/axiosClient';
 import {
@@ -18,10 +19,15 @@ import {
   Users,
   History,
   Bell,
+  MessageSquare,
+  Check,
+  CheckCheck,
+  ArrowLeft,
+  Send,
 } from 'lucide-react';
 import ItemCard, { type Item } from '../components/ItemCard';
 
-type TabId = 'activeAds' | 'myApplications' | 'history' | 'notifications' | 'reviews';
+type TabId = 'activeAds' | 'myApplications' | 'history' | 'notifications' | 'reviews' | 'messages';
 
 interface TabItem {
   id: TabId;
@@ -33,6 +39,7 @@ const TABS: TabItem[] = [
   { id: 'activeAds', label: 'Aktif İlanlarım', icon: List },
   { id: 'myApplications', label: 'Talip Olduklarım', icon: Heart },
   { id: 'history', label: 'Geçmiş İşlemlerim', icon: History },
+  { id: 'messages', label: 'Mesajlarım', icon: MessageSquare },
   { id: 'notifications', label: 'Bildirimler', icon: Bell },
   { id: 'reviews', label: 'Değerlendirmeler', icon: Star },
 ];
@@ -78,10 +85,49 @@ interface ItemApplication {
   user: { id: string; fullName: string; avatarUrl: string | null; email: string };
 }
 
+interface ChatRoom {
+  id: string;
+  itemId: string;
+  item: {
+    id: string;
+    title: string;
+    images: string[];
+    status: string;
+  };
+  ownerId: string;
+  owner: {
+    id: string;
+    fullName: string;
+    avatarUrl: string | null;
+  };
+  applicantId: string;
+  applicant: {
+    id: string;
+    fullName: string;
+    avatarUrl: string | null;
+  };
+  unreadCount?: number;
+  messages?: ChatMessage[];
+  updatedAt: string;
+  isBlocked?: boolean;
+  blockedByMe?: boolean;
+}
+
+interface ChatMessage {
+  id: string;
+  roomId: string;
+  senderId: string;
+  content: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
 const ProfilePage = () => {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<TabId>('activeAds');
+  const location = useLocation();
+  const routeState = location.state as { activeTab?: TabId; activeRoomId?: string } | null;
+  const [activeTab, setActiveTab] = useState<TabId>(routeState?.activeTab || 'activeAds');
 
   // Aktif İlanlar state
   const [myItems, setMyItems] = useState<Item[]>([]);
@@ -102,6 +148,22 @@ const ProfilePage = () => {
   const [loadingBought, setLoadingBought] = useState(false);
   const [loadingShared, setLoadingShared] = useState(false);
   const [historySubTab, setHistorySubTab] = useState<'bought' | 'shared'>('bought');
+
+  // Sohbet (Chat) state'leri
+  const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
+  const [loadingRooms, setLoadingRooms] = useState(false);
+  const [activeRoom, setActiveRoom] = useState<ChatRoom | null>(null);
+  const [roomMessages, setRoomMessages] = useState<ChatMessage[]>([]);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [messageInput, setMessageInput] = useState('');
+  const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
+  const socketRef = useRef<Socket | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Engelleme state'leri
+  const [blockedUserIds, setBlockedUserIds] = useState<Set<string>>(new Set());
+  const [blockMenuOpen, setBlockMenuOpen] = useState(false);
+  const [isBlocking, setIsBlocking] = useState(false);
 
   // Yıldız Puanlama Modalı state
   const [ratingModalAppId, setRatingModalAppId] = useState<string | null>(null);
@@ -342,10 +404,246 @@ const ProfilePage = () => {
     }
   };
 
-  // Sayfa ilk yüklendiğinde bildirimleri arka planda çek (rozet sayıları için)
+  const handleStartChat = async (itemId: string, applicantId?: string) => {
+    try {
+      const res = await axiosClient.post('/chat/rooms', {
+        itemId,
+        ...(applicantId && { applicantId })
+      });
+      if (res.data?.status === 'success' && res.data?.data) {
+        setActiveTab('messages');
+        selectRoom(res.data.data);
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Sohbet başlatılamadı.');
+    }
+  };
+
+  useEffect(() => {
+    if (routeState?.activeRoomId && chatRooms.length > 0 && !activeRoom) {
+      const roomToSelect = chatRooms.find(r => r.id === routeState.activeRoomId);
+      if (roomToSelect) {
+        selectRoom(roomToSelect);
+        window.history.replaceState({}, document.title);
+      }
+    }
+  }, [chatRooms, routeState?.activeRoomId, activeRoom]);
+
+  // WebSocket bağlantısını yöneten useEffect
+  useEffect(() => {
+    const token = useAuthStore.getState().token;
+    if (!token || !user) return;
+
+    const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const socket = io(backendUrl, {
+      auth: { token }
+    });
+
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      console.log('⚡ Socket.io sunucusuna baglanildi');
+    });
+
+    socket.on('new_message', (msg: ChatMessage) => {
+      setRoomMessages((prev) => {
+        if (prev.some((m) => m.id === msg.id)) return prev;
+        return [...prev, msg];
+      });
+
+      setChatRooms((prevRooms) => {
+        return prevRooms.map((room) => {
+          if (room.id === msg.roomId) {
+            return {
+              ...room,
+              messages: [msg],
+              // Aktif odadayken gelen mesajı okunmuş say
+              unreadCount: activeRoom?.id === msg.roomId ? 0 : (room.unreadCount ?? 0) + 1,
+              updatedAt: msg.createdAt
+            };
+          }
+          return room;
+        }).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      });
+      
+      // Aktif odadayken alınan mesajı okundu olarak işaretle (sessizce)
+      if (activeRoom && activeRoom.id === msg.roomId && msg.senderId !== user?.id) {
+        axiosClient.patch(`/chat/rooms/${msg.roomId}/read`).catch(() => {});
+      }
+    });
+
+    socket.on('messages_read', ({ roomId, readerId }: { roomId: string; readerId: string }) => {
+      if (activeRoom && activeRoom.id === roomId && readerId !== user?.id) {
+        setRoomMessages((prev) =>
+          prev.map((msg) => (msg.senderId === user?.id ? { ...msg, isRead: true } : msg))
+        );
+      }
+    });
+
+    socket.on('user_typing', ({ roomId, userId, isTyping }: { roomId: string; userId: string; isTyping: boolean }) => {
+      if (activeRoom && activeRoom.id === roomId) {
+        const otherUserId = activeRoom.ownerId === user?.id ? activeRoom.applicantId : activeRoom.ownerId;
+        if (userId === otherUserId) {
+          setIsOtherUserTyping(isTyping);
+        }
+      }
+    });
+
+    socket.on('message_badge_update', ({ roomId, message }: { roomId: string; message: ChatMessage }) => {
+      if (activeRoom?.id !== roomId) {
+        setChatRooms((prevRooms) => {
+          return prevRooms.map((room) => {
+            if (room.id === roomId) {
+              return {
+                ...room,
+                messages: [message],
+                unreadCount: (room.unreadCount ?? 0) + 1,
+                updatedAt: message.createdAt
+              };
+            }
+            return room;
+          }).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+        });
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, [activeRoom?.id, user?.id]);
+
+  // Mesaj listesi güncellendiğinde otomatik en aşağı kaydır
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [roomMessages, isOtherUserTyping]);
+
+  const selectRoom = async (room: ChatRoom) => {
+    if (activeRoom && socketRef.current) {
+      socketRef.current.emit('leave_room', activeRoom.id);
+    }
+    setActiveRoom(room);
+    setIsOtherUserTyping(false);
+    setLoadingMessages(true);
+    try {
+      const res = await axiosClient.get(`/chat/rooms/${room.id}/messages`);
+      setRoomMessages(res.data?.data ?? []);
+      
+      setChatRooms((prev) =>
+        prev.map((r) => (r.id === room.id ? { ...r, unreadCount: 0 } : r))
+      );
+
+      if (socketRef.current) {
+        socketRef.current.emit('join_room', room.id);
+      }
+    } catch {
+      console.error('Mesajlar yüklenirken hata');
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
+  const fetchChatRooms = async () => {
+    setLoadingRooms(true);
+    try {
+      const res = await axiosClient.get('/chat/rooms');
+      setChatRooms(res.data?.data ?? []);
+    } catch {
+      console.error('Sohbet odaları yüklenirken hata');
+    } finally {
+      setLoadingRooms(false);
+    }
+  };
+
+  const fetchBlockedUsers = async () => {
+    try {
+      const res = await axiosClient.get('/users/blocked');
+      const ids = (res.data?.data ?? []).map((u: { id: string }) => u.id);
+      setBlockedUserIds(new Set(ids));
+    } catch {
+      console.error('Engellenenler alınamadı');
+    }
+  };
+
+  const handleBlockToggle = async (targetUserId: string) => {
+    setIsBlocking(true);
+    setBlockMenuOpen(false);
+    try {
+      const isCurrentlyBlocked = blockedUserIds.has(targetUserId);
+      if (isCurrentlyBlocked) {
+        await axiosClient.delete(`/users/${targetUserId}/block`);
+        setBlockedUserIds(prev => { const s = new Set(prev); s.delete(targetUserId); return s; });
+      } else {
+        await axiosClient.post(`/users/${targetUserId}/block`);
+        setBlockedUserIds(prev => new Set([...prev, targetUserId]));
+      }
+    } catch {
+      alert('Engelleme işlemi başarısız oldu.');
+    } finally {
+      setIsBlocking(false);
+    }
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeRoom || !messageInput.trim()) return;
+
+    const content = messageInput.trim();
+    setMessageInput('');
+    
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    socketRef.current?.emit('typing', { roomId: activeRoom.id, isTyping: false });
+
+    try {
+      const res = await axiosClient.post(`/chat/rooms/${activeRoom.id}/messages`, { content });
+      const newMsg = res.data?.data;
+      if (newMsg) {
+        setRoomMessages((prev) => [...prev, newMsg]);
+
+        setChatRooms((prev) =>
+          prev.map((r) =>
+            r.id === activeRoom.id
+              ? { ...r, messages: [newMsg], updatedAt: newMsg.createdAt }
+              : r
+          ).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+        );
+      }
+    } catch {
+      alert('Mesaj gönderilemedi, lütfen tekrar deneyin.');
+    }
+  };
+
+  const handleTyping = () => {
+    if (!activeRoom || !socketRef.current) return;
+
+    socketRef.current.emit('typing', { roomId: activeRoom.id, isTyping: true });
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    typingTimeoutRef.current = setTimeout(() => {
+      socketRef.current?.emit('typing', { roomId: activeRoom.id, isTyping: false });
+    }, 3000);
+  };
+
+  // Sayfa ilk yüklendiğinde bildirimleri ve sohbetleri arka planda çek (rozet sayıları için)
   useEffect(() => {
     fetchNotifications(false);
+    fetchChatRooms();
   }, []);
+
+  // Yönlendirme (routeState) ile sekme değiştiğinde aktif sekmeyi güncelle
+  useEffect(() => {
+    if (routeState?.activeTab) {
+      setActiveTab(routeState.activeTab);
+    }
+  }, [routeState?.activeTab]);
 
   // Aktif sekmeye ait okunmamış bildirimleri otomatik okundu olarak işaretle
   useEffect(() => {
@@ -384,6 +682,7 @@ const ProfilePage = () => {
     }
     if (activeTab === 'notifications') fetchNotifications(true);
     if (activeTab === 'reviews') fetchMyReviews();
+    if (activeTab === 'messages') { fetchChatRooms(); fetchBlockedUsers(); }
   }, [activeTab, historySubTab]);
 
   const handleLogout = () => { logout(); navigate('/'); };
@@ -609,6 +908,17 @@ const ProfilePage = () => {
                       ? <Loader2 size={12} className="animate-spin" />
                       : <Undo2 size={12} />}
                     Talebi Geri Çek
+                  </button>
+                )}
+
+                {(app.status === 'PENDING' || (app.status === 'APPROVED' && app.item.status === 'RESERVED')) && (
+                  <button
+                    onClick={() => handleStartChat(app.item.id)}
+                    className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full transition-all cursor-pointer"
+                    style={{ background: 'rgba(224,93,58,0.08)', color: 'var(--color-artisan-orange)', border: '1px solid rgba(224,93,58,0.15)' }}
+                  >
+                    <MessageSquare size={12} />
+                    Sahibiyle Mesajlaş
                   </button>
                 )}
 
@@ -997,10 +1307,319 @@ const ProfilePage = () => {
     );
   };
 
+  const renderMessages = () => {
+    const otherUser = (room: ChatRoom) => {
+      return room.ownerId === user?.id ? room.applicant : room.owner;
+    };
+
+    return (
+      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex h-[600px] transition-all duration-300" style={{ fontFamily: 'var(--font-sans)' }}>
+        {/* Sol Panel: Sohbet Odaları */}
+        <div className={`${activeRoom ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-80 border-r border-gray-100 bg-gray-50/20`}>
+          <div className="p-4 border-b border-gray-50 flex items-center justify-between">
+            <h3 className="font-serif font-bold text-lg" style={{ color: 'var(--color-ink-dark)' }}>Sohbetlerim</h3>
+            <span className="text-[10px] font-bold px-2 py-0.5 bg-orange-50 rounded-full" style={{ color: 'var(--color-artisan-orange)' }}>
+              {chatRooms.length} Oda
+            </span>
+          </div>
+
+          <div className="flex-1 overflow-y-auto divide-y divide-gray-50 scrollbar-thin">
+            {loadingRooms ? (
+              <div className="flex flex-col items-center justify-center h-48 gap-2">
+                <Loader2 size={24} className="animate-spin" style={{ color: 'var(--color-artisan-orange)' }} />
+                <p className="text-xs" style={{ color: 'var(--color-ink-light)' }}>Sohbetler yükleniyor...</p>
+              </div>
+            ) : chatRooms.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-48 text-center p-6 gap-2">
+                <MessageSquare size={32} className="opacity-40" style={{ color: 'var(--color-ink-light)' }} />
+                <p className="text-xs font-bold" style={{ color: 'var(--color-ink-dark)' }}>Henüz mesaj yok</p>
+                <p className="text-[10px] leading-relaxed" style={{ color: 'var(--color-ink-light)' }}>
+                  Paylaşılan ürünler için onaylanan başvurular üzerinden sohbetler otomatik oluşur.
+                </p>
+              </div>
+            ) : (
+              chatRooms.map((room) => {
+                const partner = otherUser(room);
+                const isSelected = activeRoom?.id === room.id;
+                const lastMsg = room.messages?.[0];
+                const partnerName = partner?.fullName || 'Kullanıcı';
+
+                return (
+                  <button
+                    key={room.id}
+                    onClick={() => selectRoom(room)}
+                    className={`w-full text-left p-4 transition-colors flex gap-3 items-start cursor-pointer hover:bg-orange-50/20 ${isSelected ? 'bg-orange-50/40 border-l-4' : ''}`}
+                    style={isSelected ? { borderLeftColor: 'var(--color-artisan-orange)' } : {}}
+                  >
+                    {/* Avatar */}
+                    <div className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-white font-bold text-sm overflow-hidden" style={{ background: 'var(--color-artisan-earth)' }}>
+                      {partner?.avatarUrl ? (
+                        <img src={partner.avatarUrl || undefined} alt={partnerName} className="w-full h-full object-cover" />
+                      ) : (
+                        partnerName.charAt(0).toUpperCase()
+                      )}
+                    </div>
+                    {/* Detaylar */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-baseline mb-0.5">
+                        <span className="text-xs font-bold truncate capitalize" style={{ color: 'var(--color-ink-dark)' }}>{partnerName}</span>
+                        {room.updatedAt && (
+                          <span className="text-[9px]" style={{ color: 'var(--color-ink-light)' }}>
+                            {new Date(room.updatedAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[10px] font-bold truncate mb-1" style={{ color: 'var(--color-artisan-orange)' }}>
+                        🏷️ {room.item?.title}
+                      </p>
+                      <p className="text-xs truncate" style={{ color: 'var(--color-ink-light)' }}>
+                        {lastMsg ? lastMsg.content : 'Henüz mesaj yok...'}
+                      </p>
+                    </div>
+                    {/* Okunmamış Rozeti */}
+                    {(room.unreadCount ?? 0) > 0 && !isSelected && (
+                      <span
+                        className="w-4 h-4 rounded-full text-white text-[9px] font-bold flex items-center justify-center flex-shrink-0 animate-pulse"
+                        style={{ background: 'var(--color-artisan-orange)' }}
+                      >
+                        {room.unreadCount}
+                      </span>
+                    )}
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* Sağ Panel: Mesajlaşma Penceresi */}
+        <div className={`${activeRoom ? 'flex' : 'hidden md:flex'} flex-1 flex-col bg-white`}>
+          {activeRoom ? (
+            <>
+              {/* Header */}
+              <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-white shadow-sm z-10">
+                <div className="flex items-center gap-3 min-w-0">
+                  {/* Mobil Geri Dön Butonu */}
+                  <button
+                    onClick={() => setActiveRoom(null)}
+                    className="md:hidden p-1.5 rounded-full hover:bg-gray-100 flex-shrink-0 cursor-pointer text-ink-dark"
+                  >
+                    <ArrowLeft size={18} />
+                  </button>
+
+                  <div className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-white font-bold text-sm overflow-hidden" style={{ background: 'var(--color-artisan-earth)' }}>
+                    {otherUser(activeRoom)?.avatarUrl ? (
+                      <img src={otherUser(activeRoom).avatarUrl || undefined} alt={otherUser(activeRoom).fullName} className="w-full h-full object-cover" />
+                    ) : (
+                      (otherUser(activeRoom)?.fullName || 'K').charAt(0).toUpperCase()
+                    )}
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold truncate capitalize" style={{ color: 'var(--color-ink-dark)' }}>
+                      {otherUser(activeRoom)?.fullName}
+                    </p>
+                    <button
+                      onClick={() => navigate(`/ilan/${activeRoom.itemId}`)}
+                      className="text-[10px] hover:underline truncate flex items-center gap-1 font-semibold text-left"
+                      style={{ color: 'var(--color-artisan-orange)' }}
+                    >
+                      📦 Ürün: {activeRoom.item?.title}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {activeRoom.item?.images?.[0] && (
+                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-50 border border-gray-100 cursor-pointer" onClick={() => navigate(`/ilan/${activeRoom.itemId}`)}>
+                      <img src={activeRoom.item.images[0]} alt={activeRoom.item.title} className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  {/* 3 Nokta Menüsü - Engelleme */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setBlockMenuOpen(v => !v)}
+                      className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors cursor-pointer"
+                      style={{ color: 'var(--color-ink-light)' }}
+                      disabled={isBlocking}
+                    >
+                      {isBlocking ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <span className="text-lg leading-none font-bold" style={{ letterSpacing: '1px' }}>⋯</span>
+                      )}
+                    </button>
+                    {blockMenuOpen && (
+                      <>
+                        <div className="fixed inset-0 z-30" onClick={() => setBlockMenuOpen(false)} />
+                        <div className="absolute right-0 top-full mt-1 z-40 bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden min-w-[180px] animate-in fade-in zoom-in-95 duration-150">
+                          {(() => {
+                            const partnerId = otherUser(activeRoom)?.id;
+                            const isPartnerBlocked = partnerId ? blockedUserIds.has(partnerId) : false;
+                            return (
+                              <button
+                                onClick={() => partnerId && handleBlockToggle(partnerId)}
+                                className="w-full text-left px-4 py-3 text-xs font-bold flex items-center gap-2.5 hover:bg-red-50 transition-colors cursor-pointer"
+                                style={{ color: isPartnerBlocked ? 'var(--color-artisan-sage-dark)' : '#ef4444' }}
+                              >
+                                <span>{isPartnerBlocked ? '✅ Engeli Kaldır' : '🚫 Kullanıcıyı Engelle'}</span>
+                              </button>
+                            );
+                          })()}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Mesaj Listesi */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ background: 'rgba(247, 244, 240, 0.4)' }}>
+                {loadingMessages ? (
+                  <div className="flex flex-col items-center justify-center h-full gap-2">
+                    <Loader2 size={24} className="animate-spin" style={{ color: 'var(--color-artisan-orange)' }} />
+                    <p className="text-xs" style={{ color: 'var(--color-ink-light)' }}>Mesajlar yükleniyor...</p>
+                  </div>
+                ) : (
+                  <>
+                    {roomMessages.map((msg) => {
+                      const isMe = msg.senderId === user?.id;
+                      return (
+                        <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in fade-in duration-200`}>
+                          <div
+                            className={`relative px-4 py-2 rounded-2xl max-w-[75%] shadow-sm ${
+                              isMe
+                                ? 'text-white rounded-tr-none'
+                                : 'bg-white rounded-tl-none border border-gray-100'
+                            }`}
+                            style={{
+                              background: isMe ? 'var(--color-artisan-orange)' : '#ffffff',
+                              color: isMe ? '#ffffff' : 'var(--color-ink-dark)'
+                            }}
+                          >
+                            <p className="text-xs leading-relaxed break-words">{msg.content}</p>
+                            
+                            <div className="flex items-center justify-end gap-1 mt-1">
+                              <span className="text-[9px]" style={{ color: isMe ? 'rgba(255,255,255,0.7)' : 'var(--color-ink-light)' }}>
+                                {new Date(msg.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                              {isMe && (
+                                msg.isRead ? (
+                                  <CheckCheck size={12} className="text-orange-200" />
+                                ) : (
+                                  <Check size={12} className="text-white/60" />
+                                )
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    
+                    {/* Yazıyor Durumu */}
+                    {isOtherUserTyping && (
+                      <div className="flex justify-start animate-in fade-in duration-200">
+                        <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-none px-4 py-2 flex items-center gap-1.5 shadow-sm">
+                          <span className="text-[11px] italic font-semibold" style={{ color: 'var(--color-ink-light)' }}>
+                            {otherUser(activeRoom)?.fullName?.split(' ')[0]} yazıyor
+                          </span>
+                          <span className="flex gap-0.5">
+                            <span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: 'var(--color-ink-light)', animationDelay: '0ms' }} />
+                            <span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: 'var(--color-ink-light)', animationDelay: '150ms' }} />
+                            <span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: 'var(--color-ink-light)', animationDelay: '300ms' }} />
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div ref={messagesEndRef} />
+                  </>
+                )}
+              </div>
+
+              {/* Mesaj Giriş Alanı */}
+              {(() => {
+                const partnerId = otherUser(activeRoom)?.id;
+                const isBlockedByMe = partnerId ? blockedUserIds.has(partnerId) : false;
+                const isBlockedByPartner = activeRoom?.isBlocked && !isBlockedByMe;
+
+                if (isBlockedByMe) {
+                  return (
+                    <div className="p-4 border-t border-gray-100 bg-red-50 flex items-center justify-center gap-2">
+                      <span className="text-xs font-semibold" style={{ color: '#ef4444' }}>
+                        🚫 Bu kullanıcıyı engellediniz. Mesaj gönderemezsiniz.
+                      </span>
+                      <button
+                        onClick={() => partnerId && handleBlockToggle(partnerId)}
+                        className="text-xs font-bold underline cursor-pointer"
+                        style={{ color: 'var(--color-artisan-sage-dark)' }}
+                      >
+                        Engeli Kaldır
+                      </button>
+                    </div>
+                  );
+                }
+
+                if (isBlockedByPartner) {
+                  return (
+                    <div className="p-4 border-t border-gray-100 bg-red-50 flex items-center justify-center gap-2">
+                      <span className="text-xs font-semibold" style={{ color: '#ef4444' }}>
+                        🚫 Bu kullanıcıyla mesajlaşamazsınız.
+                      </span>
+                    </div>
+                  );
+                }
+                return (
+                  <form onSubmit={handleSendMessage} className="p-3 border-t border-gray-100 bg-white flex gap-2 items-center">
+                    <input
+                      type="text"
+                      value={messageInput}
+                      onChange={(e) => {
+                        setMessageInput(e.target.value);
+                        handleTyping();
+                      }}
+                      placeholder="Mesajınızı yazın..."
+                      className="flex-1 text-sm outline-none px-4 py-2.5 rounded-full border border-gray-200 focus:border-orange-300 transition-colors"
+                      style={{ color: 'var(--color-ink-dark)', background: 'var(--color-paper)' }}
+                    />
+                    <button
+                      type="submit"
+                      disabled={!messageInput.trim()}
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-white disabled:opacity-50 transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-md"
+                      style={{ 
+                        background: 'var(--color-artisan-orange)',
+                        boxShadow: '0 4px 12px rgba(224,93,58,0.2)'
+                      }}
+                    >
+                      <Send size={16} />
+                    </button>
+                  </form>
+                );
+              })()}
+            </>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 gap-3" style={{ background: 'rgba(247, 244, 240, 0.2)' }}>
+              <div className="w-16 h-16 rounded-full bg-orange-50 flex items-center justify-center text-artisan-orange" style={{ background: 'rgba(224,93,58,0.08)' }}>
+                <MessageSquare size={28} style={{ color: 'var(--color-artisan-orange)' }} />
+              </div>
+              <h3 className="font-serif text-lg font-bold" style={{ color: 'var(--color-ink-dark)' }}>Sohbet Seçin</h3>
+              <p className="text-xs max-w-[280px]" style={{ color: 'var(--color-ink-light)' }}>
+                Mesajlaşmak ve teslimat koordinasyonunu sağlamak için soldan bir konuşma seçin.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const getTabUnreadCount = (tabId: TabId) => {
     const unread = notifications.filter(n => !n.isRead);
     if (tabId === 'notifications') {
       return unread.length;
+    }
+    if (tabId === 'messages') {
+      return chatRooms.reduce((sum, room) => sum + (room.unreadCount ?? 0), 0);
     }
     if (tabId === 'activeAds') {
       return unread.filter(n => n.title.includes('Talep') && (n.title.includes('Yeni') || n.title.includes('Tekrar'))).length;
@@ -1095,6 +1714,7 @@ const ProfilePage = () => {
             {activeTab === 'history' && renderHistory()}
             {activeTab === 'notifications' && renderNotifications()}
             {activeTab === 'reviews' && renderReviews()}
+            {activeTab === 'messages' && renderMessages()}
           </div>
         </div>
       </div>
@@ -1176,17 +1796,29 @@ const ProfilePage = () => {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2 flex-wrap">
-                            <p 
-                              onClick={() => setSelectedUserForReviews({ id: app.user.id, fullName: app.user.fullName })}
-                              className="text-sm font-bold capitalize cursor-pointer hover:text-artisan-orange transition-colors flex items-center gap-1.5" 
-                              style={{ color: 'var(--color-ink-dark)' }}
-                              title="Kullanıcı Değerlendirmeleri"
-                            >
-                              {app.user.fullName}
-                              <span className="text-[9px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-lg flex items-center gap-0.5 border border-amber-100">
-                                <Star size={10} className="fill-current" /> Karnesi
-                              </span>
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <p 
+                                onClick={() => setSelectedUserForReviews({ id: app.user.id, fullName: app.user.fullName })}
+                                className="text-sm font-bold capitalize cursor-pointer hover:text-artisan-orange transition-colors flex items-center gap-1.5" 
+                                style={{ color: 'var(--color-ink-dark)' }}
+                                title="Kullanıcı Değerlendirmeleri"
+                              >
+                                {app.user.fullName}
+                                <span className="text-[9px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-lg flex items-center gap-0.5 border border-amber-100">
+                                  <Star size={10} className="fill-current" /> Karnesi
+                                </span>
+                              </p>
+                              {(app.status === 'PENDING' || app.status === 'APPROVED') && (
+                                <button
+                                  title="Mesaj Gönder"
+                                  onClick={() => { const itemId = applicantsModalItemId!; setApplicantsModalItemId(null); handleStartChat(itemId, app.user.id); }}
+                                  className="w-6 h-6 rounded-full flex items-center justify-center transition-all hover:scale-110 cursor-pointer"
+                                  style={{ background: 'rgba(224,93,58,0.10)', color: 'var(--color-artisan-orange)', border: '1px solid rgba(224,93,58,0.2)' }}
+                                >
+                                  <MessageSquare size={11} />
+                                </button>
+                              )}
+                            </div>
                             
                             {/* Başvuru durum rozeti */}
                             {app.status === 'PENDING' && (
@@ -1216,7 +1848,7 @@ const ProfilePage = () => {
                         </div>
                       </div>
 
-                      {/* Onayla / Reddet Butonları */}
+                      {/* Onayla / Reddet / Mesajlaş Butonları */}
                       {app.status === 'PENDING' && (
                         <div className="flex gap-2.5 mt-3 border-t border-gray-100/30 pt-3">
                           <button
@@ -1227,6 +1859,14 @@ const ProfilePage = () => {
                           >
                             {processingAppId === app.id ? <Loader2 size={12} className="animate-spin" /> : null}
                             Reddet
+                          </button>
+                          <button
+                            onClick={() => { const itemId = applicantsModalItemId!; setApplicantsModalItemId(null); handleStartChat(itemId, app.user.id); }}
+                            className="py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
+                            style={{ background: 'rgba(224,93,58,0.08)', color: 'var(--color-artisan-orange)', border: '1px solid rgba(224,93,58,0.15)' }}
+                          >
+                            <MessageSquare size={11} />
+                            Mesajlaş
                           </button>
                           <button
                             disabled={processingAppId !== null || isItemReserved}

@@ -117,10 +117,35 @@ const ListingDetailPage = () => {
 
   // "Soru Sor" tost bildirimi tetikleyici
   const handleAskQuestion = () => {
-    setToastMessage("Sohbet özelliği yakında geliyor! Çok yakında ilan sahibiyle anlık olarak mesajlaşabileceksiniz.");
+    setToastMessage("Sohbet başlatabilmek için önce 'Talibim' butonuyla talep oluşturmalısınız. Thrifty ilkeleri gereği mesajlaşma talep oluşturulduktan sonra başlar.");
     setTimeout(() => {
       setToastMessage(null);
-    }, 4500);
+    }, 5500);
+  };
+
+  const handleStartChat = async () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    if (!item) return;
+    setIsRequestSending(true);
+    try {
+      const res = await axiosClient.post('/chat/rooms', {
+        itemId: item.id
+      });
+      if (res.data?.status === 'success' && res.data?.data) {
+        navigate('/profile', { 
+          state: { activeTab: 'messages', activeRoomId: res.data.data.id } 
+        });
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Sohbet başlatılamadı.';
+      setToastMessage(msg);
+      setTimeout(() => setToastMessage(null), 4000);
+    } finally {
+      setIsRequestSending(false);
+    }
   };
 
   // "Talibim" gerçek API çağrısı
@@ -133,10 +158,7 @@ const ListingDetailPage = () => {
         itemId: item.id,
         note: requestNote || null,
       });
-       setIsRequested(true);
-      setTimeout(() => {
-        setShowRequestModal(false);
-      }, 2500);
+      setIsRequested(true);
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
       const msg = axiosErr.response?.data?.message ?? 'Talep gönderilemedi. Lütfen tekrar deneyin.';
@@ -459,7 +481,7 @@ const ListingDetailPage = () => {
                 {/* Soru Sor (Secondary) */}
                 <button
                   id="ask-question-btn"
-                  onClick={handleAskQuestion}
+                  onClick={isRequested ? handleStartChat : handleAskQuestion}
                   className="flex-1 flex items-center justify-center gap-2 py-3 rounded-full text-xs font-bold transition-all border cursor-pointer hover:bg-gray-50 active:scale-98"
                   style={{
                     borderColor: 'rgba(74,59,50,0.2)',
@@ -609,7 +631,7 @@ const ListingDetailPage = () => {
               </form>
             ) : (
               /* Başarılı İstek Gönderim Ekranı */
-              <div className="flex flex-col items-center text-center py-6 gap-4">
+              <div className="flex flex-col items-center text-center py-6 gap-4 animate-in fade-in duration-200">
                 <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center animate-bounce">
                   <PartyPopper size={32} />
                 </div>
@@ -632,6 +654,29 @@ const ListingDetailPage = () => {
                   }}
                 >
                   Harika Bir Adım! 🌱
+                </div>
+
+                <div className="flex flex-col gap-2.5 w-full mt-4">
+                  <button
+                    onClick={handleStartChat}
+                    disabled={isRequestSending}
+                    className="tactile-btn w-full py-2.5 text-xs font-bold text-white flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    style={{ background: 'var(--color-artisan-orange)' }}
+                  >
+                    {isRequestSending ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <MessageSquare size={14} />
+                    )}
+                    İlan Sahibiyle Mesajlaş
+                  </button>
+                  
+                  <button
+                    onClick={() => setShowRequestModal(false)}
+                    className="w-full py-2 text-xs font-bold text-ink-light hover:text-ink-dark transition-colors cursor-pointer"
+                  >
+                    Kapat
+                  </button>
                 </div>
               </div>
             )}

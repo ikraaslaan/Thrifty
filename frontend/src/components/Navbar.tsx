@@ -9,6 +9,7 @@ import {
   Share2,
   ChevronDown,
   X,
+  MessageSquare,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/useAuthStore';
 
@@ -22,19 +23,28 @@ const Navbar = () => {
   const [locationInput, setLocationInput] = useState('');
   const [profileOpen, setProfileOpen] = useState(false);
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
 
   useEffect(() => {
     if (!isAuthenticated) {
       setUnreadNotificationsCount(0);
+      setUnreadMessagesCount(0);
       return;
     }
 
     const checkUnread = async () => {
       try {
-        const res = await axiosClient.get('/notifications');
-        const list = res.data?.data ?? [];
-        const count = list.filter((n: any) => !n.isRead).length;
-        setUnreadNotificationsCount(count);
+        const [notifRes, chatRes] = await Promise.all([
+          axiosClient.get('/notifications'),
+          axiosClient.get('/chat/rooms')
+        ]);
+        const notifList = notifRes.data?.data ?? [];
+        const notifCount = notifList.filter((n: any) => !n.isRead).length;
+        setUnreadNotificationsCount(notifCount);
+
+        const chatList = chatRes.data?.data ?? [];
+        const chatCount = chatList.reduce((sum: number, r: any) => sum + (r.unreadCount ?? 0), 0);
+        setUnreadMessagesCount(chatCount);
       } catch (err) {
         // Silent catch
       }
@@ -262,7 +272,7 @@ const Navbar = () => {
                         border: '1px solid rgba(74,59,50,0.1)',
                       }}
                     >
-                      {unreadNotificationsCount > 0 && (
+                      {(unreadNotificationsCount + unreadMessagesCount) > 0 && (
                         <span
                           className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-artisan-orange text-white rounded-full flex items-center justify-center font-bold text-[8px] animate-pulse border border-white"
                           style={{
@@ -270,7 +280,7 @@ const Navbar = () => {
                             boxShadow: '0 2px 6px rgba(224,93,58,0.4)',
                           }}
                         >
-                          {unreadNotificationsCount}
+                          {unreadNotificationsCount + unreadMessagesCount}
                         </span>
                       )}
                       {/* Avatar circle */}
@@ -323,6 +333,26 @@ const Navbar = () => {
                                 style={{ background: 'var(--color-artisan-orange)' }}
                               >
                                 {unreadNotificationsCount}
+                              </span>
+                            )}
+                          </Link>
+                          <Link
+                            to="/profile"
+                            state={{ activeTab: 'messages' }}
+                            onClick={() => setProfileOpen(false)}
+                            className="flex items-center justify-between px-4 py-2.5 text-sm transition-colors hover:bg-paper"
+                            style={{ color: 'var(--color-ink-dark)' }}
+                          >
+                            <span className="flex items-center gap-2">
+                              <MessageSquare size={14} />
+                              Mesajlarım
+                            </span>
+                            {unreadMessagesCount > 0 && (
+                              <span
+                                className="w-4 h-4 rounded-full bg-artisan-orange text-white text-[9px] font-bold flex items-center justify-center"
+                                style={{ background: 'var(--color-artisan-orange)' }}
+                              >
+                                {unreadMessagesCount}
                               </span>
                             )}
                           </Link>
