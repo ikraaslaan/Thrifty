@@ -67,10 +67,15 @@ model User {
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   // İlişkiler
-  items        Item[]
-  requests     Request[]
-  applications ItemApplication[]
+  items         Item[]
+  requests      Request[]
+  applications  ItemApplication[]
   notifications Notification[]
+  ownedRooms    ChatRoom[]        @relation("RoomOwner")
+  appliedRooms  ChatRoom[]        @relation("RoomApplicant")
+  sentMessages  ChatMessage[]
+  blockedUsers  UserBlock[]       @relation("Blocker")
+  blockedBy     UserBlock[]       @relation("Blocked")
 
   @@map("users")
 }
@@ -117,6 +122,7 @@ model Item {
   category     Category        @relation(fields: [categoryId], references: [id])
   requests     Request[]
   applications ItemApplication[]
+  chatRooms    ChatRoom[]
 
   // İndeksler
   @@index([userId])
@@ -189,4 +195,52 @@ model Notification {
 
   @@index([userId])
   @@map("notifications")
+}
+
+model ChatRoom {
+  id          String        @id @default(uuid()) @db.Uuid
+  itemId      String        @map("item_id") @db.Uuid
+  item        Item          @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  ownerId     String        @map("owner_id") @db.Uuid
+  owner       User          @relation("RoomOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  applicantId String        @map("applicant_id") @db.Uuid
+  applicant   User          @relation("RoomApplicant", fields: [applicantId], references: [id], onDelete: Cascade)
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  messages    ChatMessage[]
+
+  @@unique([itemId, applicantId])
+  @@index([ownerId])
+  @@index([applicantId])
+  @@map("chat_rooms")
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid()) @db.Uuid
+  roomId    String   @map("room_id") @db.Uuid
+  room      ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  senderId  String   @map("sender_id") @db.Uuid
+  sender    User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  content   String
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([roomId])
+  @@index([senderId])
+  @@map("chat_messages")
+}
+
+model UserBlock {
+  id          String   @id @default(uuid()) @db.Uuid
+  blockerId   String   @map("blocker_id") @db.Uuid
+  blockedId   String   @map("blocked_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  blocker     User     @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked     User     @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+  @@map("user_blocks")
 }
