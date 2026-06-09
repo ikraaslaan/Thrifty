@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import axiosClient from '../api/axiosClient';
 import {
   Search,
   MapPin,
@@ -20,6 +21,29 @@ const Navbar = () => {
   const [locationEditing, setLocationEditing] = useState(false);
   const [locationInput, setLocationInput] = useState('');
   const [profileOpen, setProfileOpen] = useState(false);
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setUnreadNotificationsCount(0);
+      return;
+    }
+
+    const checkUnread = async () => {
+      try {
+        const res = await axiosClient.get('/notifications');
+        const list = res.data?.data ?? [];
+        const count = list.filter((n: any) => !n.isRead).length;
+        setUnreadNotificationsCount(count);
+      } catch (err) {
+        // Silent catch
+      }
+    };
+
+    checkUnread();
+    const interval = setInterval(checkUnread, 15000); // 15 saniyede bir kontrol et
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -231,13 +255,24 @@ const Navbar = () => {
                     <button
                       id="navbar-profile-btn"
                       onClick={() => setProfileOpen(!profileOpen)}
-                      className="flex items-center gap-2 rounded-full transition-all duration-200 hover:scale-105"
+                      className="flex items-center gap-2 rounded-full transition-all duration-200 hover:scale-105 relative"
                       style={{
                         background: 'rgba(74,59,50,0.08)',
                         padding: '6px 12px 6px 6px',
                         border: '1px solid rgba(74,59,50,0.1)',
                       }}
                     >
+                      {unreadNotificationsCount > 0 && (
+                        <span
+                          className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-artisan-orange text-white rounded-full flex items-center justify-center font-bold text-[8px] animate-pulse border border-white"
+                          style={{
+                            background: 'var(--color-artisan-orange)',
+                            boxShadow: '0 2px 6px rgba(224,93,58,0.4)',
+                          }}
+                        >
+                          {unreadNotificationsCount}
+                        </span>
+                      )}
                       {/* Avatar circle */}
                       <div
                         className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-semibold"
@@ -275,11 +310,21 @@ const Navbar = () => {
                           <Link
                             to="/profile"
                             onClick={() => setProfileOpen(false)}
-                            className="flex items-center gap-2 px-4 py-2.5 text-sm transition-colors hover:bg-paper"
+                            className="flex items-center justify-between px-4 py-2.5 text-sm transition-colors hover:bg-paper"
                             style={{ color: 'var(--color-ink-dark)' }}
                           >
-                            <User size={14} />
-                            Profilim
+                            <span className="flex items-center gap-2">
+                              <User size={14} />
+                              Profilim
+                            </span>
+                            {unreadNotificationsCount > 0 && (
+                              <span
+                                className="w-4 h-4 rounded-full bg-artisan-orange text-white text-[9px] font-bold flex items-center justify-center"
+                                style={{ background: 'var(--color-artisan-orange)' }}
+                              >
+                                {unreadNotificationsCount}
+                              </span>
+                            )}
                           </Link>
                           <button
                             onClick={handleLogout}
