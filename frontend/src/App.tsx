@@ -25,7 +25,24 @@ function PrivateRoute({ element }: { element: React.ReactNode }) {
 }
 
 function App() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, token, user, fetchCurrentUser, isLoading } = useAuthStore();
+
+  React.useEffect(() => {
+    if (token && !user) {
+      fetchCurrentUser().catch((err) => {
+        console.error('Kullanıcı oturumu yüklenirken hata oluştu:', err);
+      });
+    }
+  }, [token, user, fetchCurrentUser]);
+
+  if (isLoading && token && !user) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: 'var(--color-paper)' }}>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderBottomColor: 'var(--color-artisan-orange)', borderLeftColor: 'var(--color-artisan-orange)' }} />
+        <p className="mt-4 text-xs font-semibold" style={{ color: 'var(--color-ink-light)' }}>Oturum yükleniyor...</p>
+      </div>
+    );
+  }
 
   return (
     <BrowserRouter>
