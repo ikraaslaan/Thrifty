@@ -3,10 +3,14 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const http = require('http');
 const prisma = require('./config/database');
 const routes = require('./routes');
+const { initSocket } = require('./config/socket');
 
 const app = express();
+const server = http.createServer(app);
+initSocket(server);
 const PORT = process.env.PORT || 5000;
 
 // ==================== MIDDLEWARE ====================
@@ -60,7 +64,7 @@ app.use((err, req, res, next) => {
 
 // ==================== START SERVER ====================
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, () => {
+  server.listen(PORT, () => {
       console.log(`\n🚀 Thrifty Backend calisiyor: http://localhost:${PORT}`);
       console.log(`📊 Health Check: http://localhost:${PORT}/api/health`);
       console.log(`🌍 Ortam: ${process.env.NODE_ENV || 'development'}\n`);
