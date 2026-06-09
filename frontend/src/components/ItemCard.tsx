@@ -75,6 +75,28 @@ const ItemCard = ({ item, onClick }: ItemCardProps) => {
         className="relative overflow-hidden"
         style={{ aspectRatio: '4/3', background: 'var(--color-paper)' }}
       >
+        {item.status === 'RESERVED' && (
+          <div
+            className="absolute inset-0 z-10 flex items-center justify-center"
+            style={{
+              background: 'rgba(74, 59, 50, 0.4)',
+              backdropFilter: 'blur(2px)',
+              WebkitBackdropFilter: 'blur(2px)',
+            }}
+          >
+            <span
+              className="text-xs font-bold px-4 py-2 rounded-full shadow-lg border text-white"
+              style={{
+                background: 'var(--color-artisan-orange)',
+                borderColor: 'rgba(255, 255, 255, 0.2)',
+                letterSpacing: '0.05em',
+                boxShadow: '0 8px 20px rgba(224,93,58,0.3)',
+              }}
+            >
+              Rezerve Edildi ✓
+            </span>
+          </div>
+        )}
         {hasImage ? (
           <img
             src={item.images[0]}
