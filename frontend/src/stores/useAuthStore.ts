@@ -23,6 +23,7 @@ interface AuthState {
   register: (userData: any) => Promise<void>;
   logout: () => void;
   clearError: () => void;
+  fetchCurrentUser: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -89,4 +90,26 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   clearError: () => set({ error: null }),
+
+  fetchCurrentUser: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await axiosClient.get('/auth/me');
+      const user = response.data.data;
+      set({ 
+        user, 
+        isAuthenticated: true, 
+        isLoading: false 
+      });
+    } catch (error: any) {
+      localStorage.removeItem('thrifty_token');
+      set({ 
+        user: null, 
+        token: null, 
+        isAuthenticated: false, 
+        isLoading: false 
+      });
+      throw error;
+    }
+  },
 }));
