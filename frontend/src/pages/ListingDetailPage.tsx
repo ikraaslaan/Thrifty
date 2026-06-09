@@ -8,7 +8,6 @@ import {
   MessageSquare, 
   Heart, 
   Clock, 
-  User, 
   Check, 
   ChevronRight, 
   Loader2, 
@@ -50,7 +49,6 @@ const ListingDetailPage = () => {
   const [requestNote, setRequestNote] = useState('');
   const [isRequestSending, setIsRequestSending] = useState(false);
   const [isRequested, setIsRequested] = useState(false);
-  const [applicationId, setApplicationId] = useState<string | null>(null); // Talep geri çekme için
 
   // Lightbox State'leri (Büyük resim modalı)
   const [showLightbox, setShowLightbox] = useState(false);
@@ -109,7 +107,6 @@ const ListingDetailPage = () => {
         const res = await axiosClient.get(`/applications/check/${id}`);
         if (res.data?.data?.applied) {
           setIsRequested(true);
-          setApplicationId(res.data.data.applicationId);
         }
       } catch {
         // Sessizce geç — kullanıcı giriş yapmamış olabilir
@@ -132,12 +129,11 @@ const ListingDetailPage = () => {
     if (!item) return;
     setIsRequestSending(true);
     try {
-      const res = await axiosClient.post('/applications', {
+      await axiosClient.post('/applications', {
         itemId: item.id,
         note: requestNote || null,
       });
-      setIsRequested(true);
-      setApplicationId(res.data.data?.id ?? null);
+       setIsRequested(true);
       setTimeout(() => {
         setShowRequestModal(false);
       }, 2500);
@@ -252,6 +248,28 @@ const ListingDetailPage = () => {
               onClick={handleImageClick}
               style={{ aspectRatio: '4/3', borderRadius: '1.5rem', background: 'var(--color-paper-light)' }}
             >
+              {item.status === 'RESERVED' && (
+                <div
+                  className="absolute inset-0 z-10 flex items-center justify-center animate-fade-in"
+                  style={{
+                    background: 'rgba(74, 59, 50, 0.4)',
+                    backdropFilter: 'blur(2px)',
+                    WebkitBackdropFilter: 'blur(2px)',
+                  }}
+                >
+                  <span
+                    className="text-sm font-bold px-5 py-2.5 rounded-full shadow-lg border text-white"
+                    style={{
+                      background: 'var(--color-artisan-orange)',
+                      borderColor: 'rgba(255, 255, 255, 0.2)',
+                      letterSpacing: '0.05em',
+                      boxShadow: '0 8px 20px rgba(224,93,58,0.3)',
+                    }}
+                  >
+                    Rezerve Edildi ✓
+                  </span>
+                </div>
+              )}
               {hasImage ? (
                 <img
                   src={mainImage}
@@ -457,15 +475,24 @@ const ListingDetailPage = () => {
                 {/* Talibim (Primary - Artisan Orange) */}
                 <button
                   id="claim-item-btn"
-                  disabled={isRequested}
+                  disabled={isRequested || item.status === 'RESERVED'}
                   onClick={() => setShowRequestModal(true)}
                   className="flex-2 flex items-center justify-center gap-2 py-3 rounded-full text-xs font-bold transition-all cursor-pointer active:scale-98 text-white disabled:opacity-75 disabled:cursor-not-allowed"
                   style={{
-                    background: isRequested ? 'var(--color-artisan-sage-dark)' : 'var(--color-artisan-orange)',
-                    boxShadow: isRequested ? 'none' : '0 4px 12px rgba(224,93,58,0.25)',
+                    background: item.status === 'RESERVED'
+                      ? 'var(--color-artisan-sage-dark)'
+                      : isRequested
+                      ? 'var(--color-artisan-sage-dark)'
+                      : 'var(--color-artisan-orange)',
+                    boxShadow: (isRequested || item.status === 'RESERVED') ? 'none' : '0 4px 12px rgba(224,93,58,0.25)',
                   }}
                 >
-                  {isRequested ? (
+                  {item.status === 'RESERVED' ? (
+                    <>
+                      <Check size={16} />
+                      Rezerve Edildi ✓
+                    </>
+                  ) : isRequested ? (
                     <>
                       <Check size={16} />
                       Talip Olundu ✓
