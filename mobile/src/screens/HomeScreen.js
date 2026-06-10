@@ -468,7 +468,6 @@ export default function HomeScreen({ onLogout, userProfile, onProfilePress, onSt
     );
   };
 
-  // Footer / Sayfalama Bölümü
   const renderFooter = () => {
     if (isLoading) return null;
 
@@ -497,30 +496,7 @@ export default function HomeScreen({ onLogout, userProfile, onProfilePress, onSt
             </TouchableOpacity>
           </View>
         )}
-
-        {/* ✨ Yapay Zeka Önerileri Banner'ı */}
-        <TouchableOpacity
-          style={styles.aiBanner}
-          activeOpacity={0.9}
-          onPress={onRecommendationsPress}
-        >
-          <View style={styles.aiBannerContent}>
-            <View style={styles.aiBadgeContainer}>
-              <Text style={styles.aiBadgeText}>✨ YAPAY ZEKA EŞLEŞTİRMESİ</Text>
-            </View>
-            <Text style={styles.aiBannerTitle}>
-              Aradığın Eşyalar Yapay Zeka ile Karşına Çıksın!
-            </Text>
-            <Text style={styles.aiBannerSubtitle}>
-              Platformdaki aktif ilanlar ile profilindeki eşya talepleri Gemini yapay zekası tarafından akıllıca analiz edilir, sana özel gerekçeleriyle önerilir.
-            </Text>
-            
-            <View style={styles.aiBannerButton}>
-              <Text style={styles.aiBannerButtonText}>Önerileri Gör &rarr;</Text>
-            </View>
-          </View>
-        </TouchableOpacity>
-        <View style={{ height: 40 }} />
+        <View style={{ height: 20 }} />
       </View>
     );
   };
@@ -1774,76 +1750,99 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  detailMsgBtnText: {
-    color: '#E05D3A',
-    fontSize: 14,
-    fontWeight: '800',
+  floatingPeekingContainer: {
+    position: 'absolute',
+    bottom: 24,
+    right: -10,
+    width: 100,
+    height: 90,
+    zIndex: 999,
   },
-  footerContainer: {
-    paddingHorizontal: 16,
-    width: '100%',
-  },
-  aiBanner: {
-    marginTop: 20,
-    backgroundColor: '#2C2520',
-    borderRadius: 24,
-    padding: 20,
-    shadowColor: '#2C2520',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  aiBannerContent: {
-    alignItems: 'flex-start',
-  },
-  aiBadgeContainer: {
-    backgroundColor: 'rgba(224, 93, 58, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(224, 93, 58, 0.3)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 99,
-    marginBottom: 10,
-  },
-  aiBadgeText: {
-    color: '#F97316',
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  aiBannerTitle: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '800',
-    lineHeight: 24,
-    marginBottom: 8,
-  },
-  aiBannerSubtitle: {
-    color: '#D1D5DB',
-    fontSize: 11,
-    lineHeight: 16,
-    marginBottom: 16,
-  },
-  aiBannerButton: {
-    backgroundColor: '#E05D3A',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'stretch',
+  glowOuter: {
+    position: 'absolute',
+    right: 10,
+    bottom: 10,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: 'rgba(224, 93, 58, 0.12)',
     shadowColor: '#E05D3A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
   },
-  aiBannerButtonText: {
-    color: '#FFFFFF',
+  glowInner: {
+    position: 'absolute',
+    right: 18,
+    bottom: 18,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: 'rgba(224, 93, 58, 0.2)',
+  },
+  peekingCard: {
+    width: 40,
+    height: 58,
+    borderRadius: 7,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.2,
+    borderColor: '#4A3B32',
+    padding: 3,
+    justifyContent: 'space-between',
+    shadowColor: '#4A3B32',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  peekingCardBack: {
+    position: 'absolute',
+    bottom: 16,
+    right: 44,
+    transform: [{ rotate: '-22deg' }],
+    zIndex: 10,
+  },
+  peekingCardMiddle: {
+    position: 'absolute',
+    bottom: 19,
+    right: 30,
+    transform: [{ rotate: '-8deg' }],
+    zIndex: 11,
+  },
+  peekingCardFront: {
+    position: 'absolute',
+    bottom: 23,
+    right: 16,
+    transform: [{ rotate: '12deg' }],
+    zIndex: 12,
+    borderColor: '#E05D3A',
+  },
+  cardCornerText: {
+    fontSize: 8,
+    fontWeight: '800',
+    color: '#4A3B32',
+    lineHeight: 9,
+  },
+  cardSuitSymbol: {
     fontSize: 12,
     fontWeight: '800',
+    color: '#4A3B32',
+    alignSelf: 'center',
+    marginBottom: 2,
   },
+  sparkleBadge: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: '#E05D3A',
+    borderRadius: 6,
+    width: 12,
+    height: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sparkleBadgeText: {
+    fontSize: 7,
+    lineHeight: 8,
+  }
 });
