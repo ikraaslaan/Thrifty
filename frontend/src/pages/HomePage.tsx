@@ -64,7 +64,7 @@ const HomePage = () => {
         status: 'ACTIVE',
       };
       if (conditionFilter) params.condition = conditionFilter;
-      
+
       // Hiyerarşik kategori filtresini parametrelere ekle
       const activeCategory = selectedSubCategory || selectedCategory;
       if (activeCategory) params.category = activeCategory;
@@ -106,11 +106,11 @@ const HomePage = () => {
   // Client-side arama filtresi (search param varsa)
   const filteredItems = queryParam
     ? items.filter(
-        (i) =>
-          i.title.toLowerCase().includes(queryParam.toLowerCase()) ||
-          i.description.toLowerCase().includes(queryParam.toLowerCase()) ||
-          i.category?.name.toLowerCase().includes(queryParam.toLowerCase())
-      )
+      (i) =>
+        i.title.toLowerCase().includes(queryParam.toLowerCase()) ||
+        i.description.toLowerCase().includes(queryParam.toLowerCase()) ||
+        i.category?.name.toLowerCase().includes(queryParam.toLowerCase())
+    )
     : items;
 
   const totalPages = Math.ceil(total / LIMIT);
@@ -157,16 +157,16 @@ const HomePage = () => {
               style={
                 !selectedCategory
                   ? {
-                      background: 'var(--color-artisan-orange)',
-                      color: '#fff',
-                      boxShadow: '0 4px 12px rgba(224,93,58,0.2)',
-                      border: '1px solid var(--color-artisan-orange)'
-                    }
+                    background: 'var(--color-artisan-orange)',
+                    color: '#fff',
+                    boxShadow: '0 4px 12px rgba(224,93,58,0.2)',
+                    border: '1px solid var(--color-artisan-orange)'
+                  }
                   : {
-                      background: 'rgba(255,255,255,0.7)',
-                      color: 'var(--color-ink-dark)',
-                      border: '1px solid rgba(74,59,50,0.08)',
-                    }
+                    background: 'rgba(255,255,255,0.7)',
+                    color: 'var(--color-ink-dark)',
+                    border: '1px solid rgba(74,59,50,0.08)',
+                  }
               }
             >
               <span>🌐</span>
@@ -185,16 +185,16 @@ const HomePage = () => {
                   style={
                     isSelected
                       ? {
-                          background: 'var(--color-artisan-orange)',
-                          color: '#fff',
-                          boxShadow: '0 4px 12px rgba(224,93,58,0.2)',
-                          border: '1px solid var(--color-artisan-orange)'
-                        }
+                        background: 'var(--color-artisan-orange)',
+                        color: '#fff',
+                        boxShadow: '0 4px 12px rgba(224,93,58,0.2)',
+                        border: '1px solid var(--color-artisan-orange)'
+                      }
                       : {
-                          background: 'rgba(255,255,255,0.7)',
-                          color: 'var(--color-ink-dark)',
-                          border: '1px solid rgba(74,59,50,0.08)',
-                        }
+                        background: 'rgba(255,255,255,0.7)',
+                        color: 'var(--color-ink-dark)',
+                        border: '1px solid rgba(74,59,50,0.08)',
+                      }
                   }
                 >
                   <span className="text-sm">{cat.icon || '🏷️'}</span>
@@ -206,11 +206,11 @@ const HomePage = () => {
 
           {/* Alt Kategori Seçici Bar */}
           {selectedCategory && (
-            <div 
+            <div
               className="flex items-center gap-2 overflow-x-auto py-2.5 px-3 rounded-2xl mt-2 mb-4 scrollbar-thin transition-all duration-300"
-              style={{ 
+              style={{
                 background: 'rgba(130,162,132,0.06)',
-                border: '1px dashed rgba(130,162,132,0.25)' 
+                border: '1px dashed rgba(130,162,132,0.25)'
               }}
             >
               <span className="text-[10px] font-bold uppercase tracking-wider mr-2" style={{ color: 'var(--color-artisan-sage-dark)' }}>
@@ -228,14 +228,14 @@ const HomePage = () => {
                 style={
                   !selectedSubCategory
                     ? {
-                        background: 'var(--color-artisan-sage-dark)',
-                        color: '#fff',
-                      }
+                      background: 'var(--color-artisan-sage-dark)',
+                      color: '#fff',
+                    }
                     : {
-                        background: 'rgba(255,255,255,0.8)',
-                        color: 'var(--color-ink-dark)',
-                        border: '1px solid rgba(74,59,50,0.06)',
-                      }
+                      background: 'rgba(255,255,255,0.8)',
+                      color: 'var(--color-ink-dark)',
+                      border: '1px solid rgba(74,59,50,0.06)',
+                    }
                 }
               >
                 Tümü
@@ -253,14 +253,14 @@ const HomePage = () => {
                     style={
                       isSubSelected
                         ? {
-                            background: 'var(--color-artisan-sage-dark)',
-                            color: '#fff',
-                          }
+                          background: 'var(--color-artisan-sage-dark)',
+                          color: '#fff',
+                        }
                         : {
-                            background: 'rgba(255,255,255,0.8)',
-                            color: 'var(--color-ink-dark)',
-                            border: '1px solid rgba(74,59,50,0.06)',
-                          }
+                          background: 'rgba(255,255,255,0.8)',
+                          color: 'var(--color-ink-dark)',
+                          border: '1px solid rgba(74,59,50,0.06)',
+                        }
                     }
                   >
                     <span className="mr-1">{sub.icon || '🔸'}</span>
@@ -290,15 +290,15 @@ const HomePage = () => {
               style={
                 conditionFilter === c.value
                   ? {
-                      background: 'var(--color-ink-dark)',
-                      color: '#fff',
-                      boxShadow: '0 2px 8px rgba(74,59,50,0.2)',
-                    }
+                    background: 'var(--color-ink-dark)',
+                    color: '#fff',
+                    boxShadow: '0 2px 8px rgba(74,59,50,0.2)',
+                  }
                   : {
-                      background: 'rgba(74,59,50,0.06)',
-                      color: 'var(--color-ink-light)',
-                      border: '1px solid rgba(74,59,50,0.1)',
-                    }
+                    background: 'rgba(74,59,50,0.06)',
+                    color: 'var(--color-ink-light)',
+                    border: '1px solid rgba(74,59,50,0.1)',
+                  }
               }
             >
               {c.label}
@@ -372,10 +372,10 @@ const HomePage = () => {
               <PackageOpen size={36} style={{ color: 'var(--color-ink-light)', opacity: 0.5 }} />
             </div>
             <h3 className="font-serif text-xl font-semibold text-center" style={{ color: 'var(--color-ink-dark)' }}>
-              {conditionFilter 
-                ? 'Seçtiğiniz kriterde ürün bulunmamaktadır.' 
-                : selectedCategory 
-                  ? 'Bu kategoride ilan bulunmamaktadır.' 
+              {conditionFilter
+                ? 'Seçtiğiniz kriterde ürün bulunmamaktadır.'
+                : selectedCategory
+                  ? 'Bu kategoride ilan bulunmamaktadır.'
                   : 'İlan Bulunamadı'}
             </h3>
             <p className="text-sm text-center max-w-xs" style={{ color: 'var(--color-ink-light)' }}>
@@ -383,7 +383,7 @@ const HomePage = () => {
                 ? `"${queryParam}" ile eşleşen ilan yok. Farklı bir arama yapmayı deneyin.`
                 : conditionFilter
                   ? 'Farklı bir ürün durumu seçebilir veya tüm durumları filtreleyebilirsiniz!'
-                  : selectedCategory 
+                  : selectedCategory
                     ? 'Farklı bir kategori seçebilir veya ilk ilanı siz oluşturabilirsiniz!'
                     : 'Henüz aktif ilan yok. İlk paylaşımı siz yapın!'}
             </p>
@@ -443,6 +443,47 @@ const HomePage = () => {
             )}
           </>
         )}
+
+        {/* ✨ Yapay Zeka Önerileri Banner'ı */}
+        <section 
+          className="mt-16 rounded-3xl p-8 md:p-12 text-white relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8 animate-fade-in shadow-xl cursor-pointer hover:scale-[1.01] transition-transform duration-300"
+          onClick={() => navigate('/oneriler')}
+          style={{
+            background: 'linear-gradient(135deg, var(--color-ink-dark), #4a3e38)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+          }}
+        >
+          {/* Decorative glowing background circles */}
+          <div className="absolute top-0 right-0 w-80 h-80 rounded-full bg-orange-500/10 blur-[80px] pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-60 h-60 rounded-full bg-emerald-500/5 blur-[60px] pointer-events-none" />
+
+          <div className="flex-1 min-w-0 z-10">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xs font-bold bg-orange-500/20 text-orange-400 border border-orange-500/30 px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
+                ✨ Yapay Zeka Eşleştirmesi
+              </span>
+            </div>
+            <h2 className="font-serif font-black text-2xl md:text-4xl leading-tight mb-3">
+              Aradığın Eşyalar Yapay Zeka ile Karşına Çıksın!
+            </h2>
+            <p className="text-sm text-gray-300 leading-relaxed max-w-xl">
+              Platformdaki aktif ilanlar ile profilindeki eşya talepleri Gemini yapay zekası tarafından akıllıca analiz edilir, sana özel uyum oranı ve gerekçeleriyle önerilir.
+            </p>
+          </div>
+
+          <div className="flex-shrink-0 z-10 w-full md:w-auto">
+            <button 
+              className="tactile-btn w-full md:w-auto px-8 py-3.5 text-sm font-bold text-white transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-lg flex items-center justify-center gap-2"
+              style={{
+                background: 'var(--color-artisan-orange)',
+                boxShadow: '0 8px 20px rgba(224,93,58,0.35)',
+              }}
+            >
+              Önerileri Gör
+              <span>&rarr;</span>
+            </button>
+          </div>
+        </section>
 
       </div>
     </main>
