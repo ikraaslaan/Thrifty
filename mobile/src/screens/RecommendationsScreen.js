@@ -46,15 +46,31 @@ export default function RecommendationsScreen({ userProfile, onBack, onStartChat
   const [requestNote, setRequestNote] = useState('');
   const [showRequestForm, setShowRequestForm] = useState(false);
 
-  const fetchRecommendations = async () => {
+  const fetchRecommendations = async (refresh = false) => {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await apiClient.get('/ai/recommendations', { timeout: 30000 });
+      const res = await apiClient.get(`/ai/recommendations${refresh ? '?refresh=true' : ''}`, { timeout: 30000 });
       setRecommendations(res.data?.data ?? []);
     } catch (err) {
       console.error('Yapay zeka önerileri yüklenirken hata:', err);
-      setError(err.response?.data?.message || 'Öneriler yüklenirken bir sorun oluştu.');
+      let msg = err.response?.data?.message || err.message || 'Öneriler yüklenirken bir sorun oluştu.';
+      if (typeof msg === 'string') {
+        if (msg.includes('quota') || msg.includes('Quota') || msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED')) {
+          const retryMatch = msg.match(/Please retry in ([\d\.]+)\s*s/i) || msg.match(/retry in ([\d\.]+)/i);
+          if (retryMatch && retryMatch[1]) {
+            const seconds = Math.ceil(parseFloat(retryMatch[1]));
+            msg = `Yapay zeka servisinin günlük kullanım limiti (kotası) dolmuştur. Lütfen ${seconds} saniye sonra tekrar deneyiniz.`;
+          } else {
+            msg = 'Yapay zeka servisinin günlük kullanım limiti (kotası) dolmuştur. Lütfen daha sonra tekrar deneyiniz.';
+          }
+        } else if (msg.includes('demand') || msg.includes('503') || msg.includes('temporary') || msg.includes('spikes')) {
+          msg = 'Yapay zeka servisi şu an yoğun talep görüyor. Lütfen birkaç dakika sonra tekrar deneyiniz.';
+        } else if (msg.includes('API key') || msg.includes('key')) {
+          msg = 'Yapay zeka API anahtarı geçersiz veya yapılandırılmamış.';
+        }
+      }
+      setError(msg);
     } finally {
       setIsLoading(false);
     }
@@ -196,7 +212,7 @@ export default function RecommendationsScreen({ userProfile, onBack, onStartChat
       {!isLoading && error && (
         <View style={styles.centerContainer}>
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={fetchRecommendations}>
+          <TouchableOpacity style={styles.retryButton} onPress={() => fetchRecommendations(true)}>
             <Text style={styles.retryButtonText}>Yeniden Hesapla</Text>
           </TouchableOpacity>
         </View>

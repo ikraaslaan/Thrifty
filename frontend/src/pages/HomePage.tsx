@@ -119,8 +119,8 @@ const HomePage = () => {
     <main className="pt-24 pb-16 min-h-screen" style={{ fontFamily: 'var(--font-sans)' }}>
       <div className="max-w-7xl mx-auto px-4 md:px-8">
 
-        {/* ── Hero başlık ── */}
-        <section className="mb-8 mt-2">
+        {/* ── Hero başlık & AI Card Deck Circle ── */}
+        <section className="mb-8 mt-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
           {queryParam ? (
             <div>
               <h1 className="font-serif text-3xl font-bold" style={{ color: 'var(--color-ink-dark)' }}>
@@ -138,6 +138,88 @@ const HomePage = () => {
               <p className="mt-1 text-sm" style={{ color: 'var(--color-ink-light)' }}>
                 Seninle paylaşılmayı bekleyen eşyalar
               </p>
+            </div>
+          )}
+
+          {/* AI Card Deck Circle */}
+          {!queryParam && (
+            <div 
+              onClick={() => navigate('/oneriler')}
+              className="relative self-center sm:self-auto cursor-pointer group flex flex-col items-center gap-1.5"
+            >
+              {/* Glowing Circle */}
+              <div 
+                className="w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center transition-all duration-500 ease-out relative"
+                style={{
+                  background: 'linear-gradient(135deg, #1C1917, #2C2520)',
+                  border: '2px solid rgba(249, 115, 22, 0.4)',
+                  boxShadow: '0 0 25px rgba(249, 115, 22, 0.45), inset 0 0 15px rgba(249, 115, 22, 0.15)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 45px rgba(249, 115, 22, 0.8), inset 0 0 20px rgba(249, 115, 22, 0.25)';
+                  e.currentTarget.style.borderColor = 'rgba(249, 115, 22, 0.9)';
+                  e.currentTarget.style.transform = 'scale(1.05)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 25px rgba(249, 115, 22, 0.45), inset 0 0 15px rgba(249, 115, 22, 0.15)';
+                  e.currentTarget.style.borderColor = 'rgba(249, 115, 22, 0.4)';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >
+                {/* Deck of Queen of Spades Cards - floating OUTSIDE of the circle */}
+                <div className="absolute w-20 h-20 flex items-center justify-center pointer-events-none z-10">
+                  {/* Card 1 (Bottom Left) */}
+                  <div 
+                    className="absolute w-10 h-14 rounded-md bg-white border border-stone-200 flex flex-col justify-between p-0.5 text-stone-900 shadow-md transition-transform duration-500 ease-out group-hover:rotate-[-25deg] group-hover:translate-x-[-12px] group-hover:translate-y-[-6px]"
+                    style={{ transform: 'rotate(-15deg) translateX(-6px) translateY(2px)', fontSize: '7px', fontWeight: 'bold' }}
+                  >
+                    <div className="flex flex-col items-center leading-none">
+                      <span>Q</span>
+                      <span className="text-[6px]">♠</span>
+                    </div>
+                    <div className="text-center text-xs leading-none">♠</div>
+                    <div className="flex flex-col items-center leading-none transform rotate-180">
+                      <span>Q</span>
+                      <span className="text-[6px]">♠</span>
+                    </div>
+                  </div>
+
+                  {/* Card 2 (Bottom Right) */}
+                  <div 
+                    className="absolute w-10 h-14 rounded-md bg-white border border-stone-200 flex flex-col justify-between p-0.5 text-stone-900 shadow-md transition-transform duration-500 ease-out group-hover:rotate-[25deg] group-hover:translate-x-[12px] group-hover:translate-y-[-6px]"
+                    style={{ transform: 'rotate(15deg) translateX(6px) translateY(2px)', fontSize: '7px', fontWeight: 'bold' }}
+                  >
+                    <div className="flex flex-col items-center leading-none">
+                      <span>Q</span>
+                      <span className="text-[6px]">♠</span>
+                    </div>
+                    <div className="text-center text-xs leading-none">♠</div>
+                    <div className="flex flex-col items-center leading-none transform rotate-180">
+                      <span>Q</span>
+                      <span className="text-[6px]">♠</span>
+                    </div>
+                  </div>
+
+                  {/* Card 3 (Center Front) */}
+                  <div 
+                    className="absolute w-10 h-14 rounded-md bg-white border-2 border-orange-500 flex flex-col justify-between p-0.5 text-stone-900 shadow-xl transition-transform duration-500 ease-out group-hover:translate-y-[-10px] group-hover:scale-105"
+                    style={{ transform: 'rotate(0deg) translateY(-2px)', fontSize: '7px', fontWeight: 'bold' }}
+                  >
+                    <div className="flex flex-col items-center leading-none text-orange-600">
+                      <span>Q</span>
+                      <span className="text-[6px]">♠</span>
+                    </div>
+                    <div className="text-center text-xs leading-none text-orange-600">♠</div>
+                    <div className="flex flex-col items-center leading-none transform rotate-180 text-orange-600">
+                      <span>Q</span>
+                      <span className="text-[6px]">♠</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <span className="text-[9px] font-bold tracking-widest uppercase text-orange-500 group-hover:text-orange-400 transition-colors animate-pulse">
+                Yapay Zeka Önerileri 🔮
+              </span>
             </div>
           )}
         </section>

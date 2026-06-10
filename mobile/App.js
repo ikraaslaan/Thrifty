@@ -202,6 +202,50 @@ function MainNavigator({ user, onLogout, socket }) {
           <Text style={[styles.tabLabel, activeTab === 'Share' && styles.tabLabelActive]}>Paylaş</Text>
         </TouchableOpacity>
 
+        {/* 🤖 Yapay Zeka Önerileri Raised Tab Item */}
+        <TouchableOpacity
+          style={styles.raisedTabItem}
+          onPress={() => setActiveTab('Recommendations')}
+          activeOpacity={0.8}
+        >
+          {/* Glowing backdrops */}
+          <View style={styles.raisedGlow} />
+          
+          {/* Big raised circle */}
+          <View style={styles.raisedCircle}>
+            {/* Card 1 (Back, rotated) */}
+            <View style={[styles.tabCard, styles.tabCardBack]}>
+              <Text style={styles.tabCardText}>Q</Text>
+              <Text style={styles.tabCardSuit}>♠</Text>
+            </View>
+            
+            {/* Card 2 (Middle, rotated) */}
+            <View style={[styles.tabCard, styles.tabCardMiddle]}>
+              <Text style={styles.tabCardText}>Q</Text>
+              <Text style={styles.tabCardSuit}>♠</Text>
+            </View>
+            
+            {/* Card 3 (Front, rotated) */}
+            <View style={[styles.tabCard, styles.tabCardFront]}>
+              <Text style={[styles.tabCardText, { color: '#E05D3A' }]}>Q</Text>
+              <Text style={[styles.tabCardSuit, { color: '#E05D3A' }]}>♠</Text>
+            </View>
+            
+            {/* Sparkle badge */}
+            <View style={styles.tabSparkle}>
+              <Text style={styles.tabSparkleText}>✨</Text>
+            </View>
+          </View>
+          
+          <Text style={[
+            styles.tabLabel, 
+            activeTab === 'Recommendations' && styles.tabLabelActive, 
+            { marginTop: 28 }
+          ]}>
+            Öneriler
+          </Text>
+        </TouchableOpacity>
+
         <TouchableOpacity
           style={styles.tabItem}
           onPress={() => setActiveTab('Notifications')}
@@ -445,5 +489,105 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 9,
     fontWeight: '900',
+  },
+  raisedTabItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  raisedGlow: {
+    position: 'absolute',
+    top: -24,
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    backgroundColor: 'rgba(224, 93, 58, 0.12)',
+    shadowColor: '#E05D3A',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 10,
+  },
+  raisedCircle: {
+    position: 'absolute',
+    top: -20,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#E05D3A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#4A3B32',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
+    elevation: 6,
+  },
+  tabCard: {
+    width: 20,
+    height: 30,
+    borderRadius: 4,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 0.8,
+    borderColor: '#4A3B32',
+    padding: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tabCardBack: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    transform: [{ rotate: '-22deg' }],
+    zIndex: 10,
+  },
+  tabCardMiddle: {
+    position: 'absolute',
+    bottom: 10,
+    left: 16,
+    transform: [{ rotate: '-5deg' }],
+    zIndex: 11,
+  },
+  tabCardFront: {
+    position: 'absolute',
+    bottom: 12,
+    right: 8,
+    transform: [{ rotate: '12deg' }],
+    zIndex: 12,
+    borderColor: '#E05D3A',
+  },
+  tabCardText: {
+    fontSize: 5,
+    fontWeight: '900',
+    color: '#4A3B32',
+    position: 'absolute',
+    top: 1,
+    left: 2,
+    lineHeight: 6,
+  },
+  tabCardSuit: {
+    fontSize: 8,
+    fontWeight: '800',
+    color: '#4A3B32',
+    marginTop: 4,
+  },
+  tabSparkle: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#E05D3A',
+    borderRadius: 6,
+    width: 13,
+    height: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 15,
+  },
+  tabSparkleText: {
+    fontSize: 8,
+    lineHeight: 10,
+    color: '#FFFFFF',
   },
 });

@@ -5,8 +5,8 @@ class AiController {
   async getRecommendations(req, res) {
     try {
       const user = req.user; // authenticate middleware'inden geliyor
-
-      const recommendations = await aiService.getRecommendations(user);
+      const forceRefresh = req.query.refresh === 'true';
+      const recommendations = await aiService.getRecommendations(user, forceRefresh);
 
       // Her tavsiye için tam ilan nesnesini veritabanından çekip ekleyelim
       const populatedRecommendations = await Promise.all(
@@ -42,11 +42,27 @@ class AiController {
       });
     } catch (error) {
       console.error('AiController getRecommendations Hatası:', error);
-      // Hata dönmek yerine, kullanıcıya boş liste dönerek arayüzün "Öneri bulunamadı" empty state'ini göstermesini sağlıyoruz
-      res.status(200).json({
-        status: 'success',
-        results: 0,
-        data: []
+      
+      let clientMessage = 'Yapay zeka öneri servisine şu anda erişilemiyor. Lütfen daha sonra tekrar deneyiniz.';
+      const errMsg = error.message || '';
+      
+      if (errMsg.includes('quota') || errMsg.includes('Quota') || errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED')) {
+        const retryMatch = errMsg.match(/Please retry in ([\d\.]+)\s*s/i) || errMsg.match(/retry in ([\d\.]+)/i);
+        if (retryMatch && retryMatch[1]) {
+          const seconds = Math.ceil(parseFloat(retryMatch[1]));
+          clientMessage = `Yapay zeka servisinin günlük kullanım limiti (kotası) dolmuştur. Lütfen ${seconds} saniye sonra tekrar deneyiniz.`;
+        } else {
+          clientMessage = 'Yapay zeka servisinin günlük kullanım limiti (kotası) dolmuştur. Lütfen daha sonra tekrar deneyiniz.';
+        }
+      } else if (errMsg.includes('demand') || errMsg.includes('503') || errMsg.includes('temporary') || errMsg.includes('spikes')) {
+        clientMessage = 'Yapay zeka servisi şu an yoğun talep görüyor. Lütfen birkaç dakika sonra tekrar deneyiniz.';
+      } else if (errMsg.includes('API key') || errMsg.includes('key')) {
+        clientMessage = 'Yapay zeka API anahtarı geçersiz veya yapılandırılmamış.';
+      }
+
+      res.status(503).json({
+        status: 'error',
+        message: clientMessage
       });
     }
   }
