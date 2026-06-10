@@ -1,7 +1,7 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { GoogleGenAI } = require('@google/genai');
 const prisma = require('../config/database');
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 class AiService {
   async getRecommendations(user) {
@@ -15,6 +15,11 @@ class AiService {
         where: { userId: user.id, status: 'OPEN' },
         include: { category: true }
       });
+
+      if (userRequests.length === 0) {
+        // Kullanıcının aktif talebi yoksa, Gemini API'yi gereksiz çağırmamak için doğrudan boş liste dönüyoruz
+        return [];
+      }
 
       // 2. Sistemdeki aktif ilanlari getir (Kullanicinin kendi ilanlari haric)
       // Prompt token sinirini asmamak icin son 50 ilani alalim
@@ -68,10 +73,12 @@ class AiService {
       `;
 
       // 4. Gemini API cagirisi
-      // gemini-1.5-flash modeli hiz ve JSON formati acisindan idealdir
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      const result = await model.generateContent(prompt);
-      const responseText = result.response.text();
+      // gemini-2.5-flash modeli hiz ve JSON formati acisindan idealdir
+      const result = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt
+      });
+      const responseText = result.text;
 
       // 5. JSON Parse Islemi
       try {
