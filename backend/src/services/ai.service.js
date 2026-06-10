@@ -3,10 +3,23 @@ const prisma = require('../config/database');
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
+// Yapay zeka isteklerini kotayı korumak için 10 dakika bellekte tutuyoruz
+const recommendationsCache = new Map();
+const CACHE_TTL = 10 * 60 * 1000; // 10 dakika
+
 class AiService {
-  async getRecommendations(user) {
+  async getRecommendations(user, forceRefresh = false) {
     if (!process.env.GEMINI_API_KEY) {
       throw new Error('GEMINI_API_KEY tanimli degil.');
+    }
+
+    // Geri çağırma (Refresh) zorlanmadıysa ve önbellekte veri varsa doğrudan önbellekten dön
+    if (!forceRefresh) {
+      const cached = recommendationsCache.get(user.id);
+      if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
+        console.log(`[Cache Hit] Kullanıcı ${user.id} için önbelleğe alınmış yapay zeka önerileri dönülüyor.`);
+        return cached.data;
+      }
     }
 
     try {
@@ -16,12 +29,18 @@ class AiService {
         include: { category: true }
       });
 
-      if (userRequests.length === 0) {
-        // Kullanıcının aktif talebi yoksa, Gemini API'yi gereksiz çağırmamak için doğrudan boş liste dönüyoruz
+      // 2. Kullanıcının talip olduğu (başvurduğu) aktif ilanları getir
+      const userApplications = await prisma.itemApplication.findMany({
+        where: { userId: user.id },
+        include: { item: { include: { category: true } } }
+      });
+
+      if (userRequests.length === 0 && userApplications.length === 0) {
+        // Kullanıcının ne aktif talebi ne de başvurusu yoksa, boş liste dönüyoruz
         return [];
       }
 
-      // 2. Sistemdeki aktif ilanlari getir (Kullanicinin kendi ilanlari haric)
+      // 3. Sistemdeki aktif ilanlari getir (Kullanicinin kendi ilanlari haric)
       // Prompt token sinirini asmamak icin son 50 ilani alalim
       const availableItems = await prisma.item.findMany({
         where: { 
@@ -37,13 +56,17 @@ class AiService {
         return [];
       }
 
-      // 3. Prompt hazirligi
+      // 4. Prompt hazirligi
       let userProfileDescription = `Kullanıcı ID: ${user.id}, Rolü: ${user.role}. `;
+      
       if (userRequests.length > 0) {
-        userProfileDescription += 'Kullanıcının aradığı eşyalar (talepler): ' + 
-          userRequests.map(r => `${r.title} (Kategori: ${r.category?.name || 'Bilinmiyor'} - ${r.description})`).join(', ') + '. ';
-      } else {
-        userProfileDescription += 'Kullanıcının henüz spesifik bir eşya talebi bulunmuyor. Genel ihtiyaçlar için uygun olabilecekleri değerlendir. ';
+        userProfileDescription += 'Kullanıcının aradığı/talep ettiği eşyalar: ' + 
+          userRequests.map(r => `${r.title} (Kategori: ${r.category?.name || 'Bilinmiyor'} - Açıklama: ${r.description})`).join(', ') + '. ';
+      }
+      
+      if (userApplications.length > 0) {
+        userProfileDescription += 'Kullanıcının talip olduğu/başvurduğu eşyalar: ' + 
+          userApplications.map(app => `${app.item?.title} (Kategori: ${app.item?.category?.name || 'Bilinmiyor'} - Açıklama: ${app.item?.description || ''})`).join(', ') + '. ';
       }
 
       const itemsDescription = availableItems.map(item => 
@@ -93,6 +116,8 @@ class AiService {
         cleanJsonText = cleanJsonText.trim();
         
         const recommendations = JSON.parse(cleanJsonText);
+        // Başarılı sonucu 10 dakika önbelleğe al
+        recommendationsCache.set(user.id, { data: recommendations, timestamp: Date.now() });
         return recommendations;
       } catch (parseError) {
         console.error("Gemini JSON parse hatası:", responseText);
