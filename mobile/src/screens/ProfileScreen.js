@@ -33,7 +33,7 @@ const CONDITION_MAP = {
   FAIR:     { label: 'Kullanılabilir', color: '#6B7280', bg: 'rgba(107,114,128,0.1)' },
 };
 
-export default function ProfileScreen({ onLogout, userProfile, initialSubTab, onSubTabChange, onEditAd }) {
+export default function ProfileScreen({ onLogout, userProfile, initialSubTab, onSubTabChange, onEditAd, onStartChat }) {
   const insets = useSafeAreaInsets();
   const [user, setUser] = useState(userProfile);
   const [activeTab, setActiveTab] = useState(initialSubTab || 'activeAds');
@@ -515,6 +515,15 @@ export default function ProfileScreen({ onLogout, userProfile, initialSubTab, on
                   </TouchableOpacity>
                 )}
 
+                {(item.status === 'PENDING' || (item.status === 'APPROVED' && item.item?.status === 'RESERVED')) && (
+                  <TouchableOpacity
+                    style={styles.adBtnChat}
+                    onPress={() => onStartChat && onStartChat(item.item.id)}
+                  >
+                    <Text style={styles.adBtnChatText}>💬 Mesajlaş</Text>
+                  </TouchableOpacity>
+                )}
+
                 {item.status === 'APPROVED' && item.item.status === 'RESERVED' && (
                   <TouchableOpacity
                     style={styles.adBtnPrimary}
@@ -842,6 +851,16 @@ export default function ProfileScreen({ onLogout, userProfile, initialSubTab, on
                           </TouchableOpacity>
 
                           <TouchableOpacity
+                            style={styles.adBtnChat}
+                            onPress={() => {
+                              setApplicantsModalItemId(null);
+                              onStartChat && onStartChat(applicantsModalItemId, item.user.id);
+                            }}
+                          >
+                            <Text style={styles.adBtnChatText}>💬 Mesaj Gönder</Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
                             style={[styles.adBtnPrimary, isReserved && { backgroundColor: '#A09890' }]}
                             disabled={processingAppId !== null || isReserved}
                             onPress={() => handleApproveApplication(item.id, applicantsModalItemId)}
@@ -852,13 +871,25 @@ export default function ProfileScreen({ onLogout, userProfile, initialSubTab, on
                       )}
 
                       {item.status === 'APPROVED' && isReserved && (
-                        <TouchableOpacity
-                          style={styles.adBtnDelete}
-                          disabled={processingAppId !== null}
-                          onPress={() => handleCancelDelivery(item.id, applicantsModalItemId)}
-                        >
-                          <Text style={styles.adBtnDeleteText}>İptal Et (Alıcı Gelmedi)</Text>
-                        </TouchableOpacity>
+                        <View style={styles.applicantActions}>
+                          <TouchableOpacity
+                            style={styles.adBtnDelete}
+                            disabled={processingAppId !== null}
+                            onPress={() => handleCancelDelivery(item.id, applicantsModalItemId)}
+                          >
+                            <Text style={styles.adBtnDeleteText}>İptal Et (Alıcı Gelmedi)</Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            style={styles.adBtnChat}
+                            onPress={() => {
+                              setApplicantsModalItemId(null);
+                              onStartChat && onStartChat(applicantsModalItemId, item.user.id);
+                            }}
+                          >
+                            <Text style={styles.adBtnChatText}>💬 Mesaj Gönder</Text>
+                          </TouchableOpacity>
+                        </View>
                       )}
                     </View>
                   );
@@ -1672,6 +1703,21 @@ const styles = StyleSheet.create({
   ratingModalSubmitText: {
     color: '#FFFFFF',
     fontSize: 13,
+    fontWeight: '700',
+  },
+  adBtnChat: {
+    backgroundColor: '#FAF8F5',
+    borderWidth: 1.5,
+    borderColor: '#E05D3A30',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  adBtnChatText: {
+    color: '#E05D3A',
+    fontSize: 11,
     fontWeight: '700',
   },
 });
