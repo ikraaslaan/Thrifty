@@ -43,7 +43,7 @@ const CONDITIONS = [
   { value: 'FAIR', label: 'Kullanılabilir' },
 ];
 
-export default function HomeScreen({ onLogout, userProfile, onProfilePress }) {
+export default function HomeScreen({ onLogout, userProfile, onProfilePress, onStartChat }) {
   const insets = useSafeAreaInsets();
   const [user, setUser] = useState(userProfile);
   const [items, setItems] = useState([]);
@@ -731,8 +731,19 @@ export default function HomeScreen({ onLogout, userProfile, onProfilePress }) {
                       <ActivityIndicator color="#E05D3A" />
                     </View>
                   ) : isRequested ? (
-                    <View style={styles.requestedBadge}>
-                      <Text style={styles.requestedBadgeText}>Talip Olundu ✓</Text>
+                    <View style={styles.requestedActionsContainer}>
+                      <View style={styles.requestedBadge}>
+                        <Text style={styles.requestedBadgeText}>Talip Olundu ✓</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.detailMsgBtn}
+                        onPress={() => {
+                          setIsDetailModalOpen(false);
+                          onStartChat && onStartChat(selectedItem.id);
+                        }}
+                      >
+                        <Text style={styles.detailMsgBtnText}>💬 Sahibiyle Mesajlaş</Text>
+                      </TouchableOpacity>
                     </View>
                   ) : (
                     <TouchableOpacity
@@ -1722,5 +1733,23 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '700',
+  },
+  requestedActionsContainer: {
+    flexDirection: 'column',
+    gap: 8,
+  },
+  detailMsgBtn: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#E05D3A30',
+    borderRadius: 16,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailMsgBtnText: {
+    color: '#E05D3A',
+    fontSize: 14,
+    fontWeight: '800',
   },
 });

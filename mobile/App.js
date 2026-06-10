@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, ActivityIndicator, Text, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, ActivityIndicator, Text, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
+import io from 'socket.io-client';
+import { API_URL } from './config';
 import apiClient from './src/api/apiClient';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
@@ -9,12 +11,15 @@ import HomeScreen from './src/screens/HomeScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import NotificationScreen from './src/screens/NotificationScreen';
 import ShareScreen from './src/screens/ShareScreen';
+import ChatScreen from './src/screens/ChatScreen';
 
-function MainNavigator({ user, onLogout }) {
-  const [activeTab, setActiveTab] = useState('Home'); // 'Home', 'Share', 'Notifications', 'Profile'
+function MainNavigator({ user, onLogout, socket }) {
+  const [activeTab, setActiveTab] = useState('Home'); // 'Home', 'Share', 'Notifications', 'Messages', 'Profile'
   const [profileSubTab, setProfileSubTab] = useState('activeAds'); // default profile sub-tab
   const [shareEditItemId, setShareEditItemId] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+  const [chatInitialRoomId, setChatInitialRoomId] = useState(null);
   const insets = useSafeAreaInsets();
 
   const fetchUnreadNotifications = async () => {
@@ -28,6 +33,17 @@ function MainNavigator({ user, onLogout }) {
     }
   };
 
+  const fetchUnreadMessagesCount = async () => {
+    try {
+      const res = await apiClient.get('/chat/rooms');
+      const rooms = res.data?.data ?? [];
+      const count = rooms.reduce((sum, r) => sum + (r.unreadCount ?? 0), 0);
+      setUnreadMessagesCount(count);
+    } catch (err) {
+      console.error('Mesaj sayısını çekerken hata:', err);
+    }
+  };
+
   // Poll for notifications unread count every 15 seconds
   useEffect(() => {
     fetchUnreadNotifications();
@@ -35,10 +51,40 @@ function MainNavigator({ user, onLogout }) {
     return () => clearInterval(interval);
   }, []);
 
-  // Whenever we view the Notifications tab, reset the unread count locally (as the screen marks them read)
+  // Sync activeTab with notifications
   useEffect(() => {
     if (activeTab === 'Notifications') {
       setUnreadCount(0);
+    }
+  }, [activeTab]);
+
+  // Real-time unread messages count sync with socket (Memory leak prevention)
+  useEffect(() => {
+    fetchUnreadMessagesCount();
+
+    if (!socket) return;
+
+    const handleBadgeUpdate = () => {
+      fetchUnreadMessagesCount();
+    };
+
+    const handleNewMessage = () => {
+      fetchUnreadMessagesCount();
+    };
+
+    socket.on('message_badge_update', handleBadgeUpdate);
+    socket.on('new_message', handleNewMessage);
+
+    return () => {
+      socket.off('message_badge_update', handleBadgeUpdate);
+      socket.off('new_message', handleNewMessage);
+    };
+  }, [socket]);
+
+  // Refresh message count when entering Messages tab
+  useEffect(() => {
+    if (activeTab === 'Messages') {
+      fetchUnreadMessagesCount();
     }
   }, [activeTab]);
 
@@ -54,6 +100,22 @@ function MainNavigator({ user, onLogout }) {
     setActiveTab('Share');
   };
 
+  const handleStartChat = async (itemId, applicantId = null) => {
+    try {
+      const res = await apiClient.post('/chat/rooms', {
+        itemId,
+        ...(applicantId && { applicantId })
+      });
+      if (res.data?.status === 'success' && res.data?.data) {
+        setChatInitialRoomId(res.data.data.id);
+        setActiveTab('Messages');
+      }
+    } catch (err) {
+      console.error('Sohbet başlatılamadı:', err);
+      Alert.alert('Hata', err.response?.data?.message || 'Sohbet başlatılamadı.');
+    }
+  };
+
   return (
     <View style={styles.mainContainer}>
       <View style={styles.screenContent}>
@@ -65,6 +127,7 @@ function MainNavigator({ user, onLogout }) {
               setActiveTab('Profile');
               setProfileSubTab('activeAds');
             }}
+            onStartChat={handleStartChat}
           />
         )}
         {activeTab === 'Share' && (
@@ -97,6 +160,15 @@ function MainNavigator({ user, onLogout }) {
               setShareEditItemId(item.id);
               setActiveTab('Share');
             }}
+            onStartChat={handleStartChat}
+          />
+        )}
+        {activeTab === 'Messages' && (
+          <ChatScreen
+            socket={socket}
+            user={user}
+            initialRoomId={chatInitialRoomId}
+            onClearInitialRoom={() => setChatInitialRoomId(null)}
           />
         )}
       </View>
@@ -141,14 +213,20 @@ function MainNavigator({ user, onLogout }) {
 
         <TouchableOpacity
           style={styles.tabItem}
-          onPress={() => {
-            setActiveTab('Profile');
-            setProfileSubTab('activeAds'); // default to activeAds when entering Profile directly
-          }}
+          onPress={() => setActiveTab('Messages')}
           activeOpacity={0.7}
         >
-          <Text style={[styles.tabIcon, activeTab === 'Profile' && styles.tabIconActive]}>👤</Text>
-          <Text style={[styles.tabLabel, activeTab === 'Profile' && styles.tabLabelActive]}>Profilim</Text>
+          <View style={styles.badgeContainer}>
+            <Text style={[styles.tabIcon, activeTab === 'Messages' && styles.tabIconActive]}>💬</Text>
+            {unreadMessagesCount > 0 && (
+              <View style={styles.tabBadge}>
+                <Text style={styles.tabBadgeText}>
+                  {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
+                </Text>
+              </View>
+            )}
+          </View>
+          <Text style={[styles.tabLabel, activeTab === 'Messages' && styles.tabLabelActive]}>Mesajlaş</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -158,9 +236,38 @@ function MainNavigator({ user, onLogout }) {
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState('Splash'); // 'Splash', 'Login', 'Register', 'Home'
   const [user, setUser] = useState(null);
+  const [socket, setSocket] = useState(null);
+
+  const initializeSocket = (token) => {
+    if (!token) return;
+    try {
+      const socketUrl = API_URL.replace('/api', '');
+      const newSocket = io(socketUrl, {
+        auth: { token },
+        transports: ['websocket'],
+      });
+
+      newSocket.on('connect', () => {
+        console.log('⚡ Socket connected to backend');
+      });
+
+      newSocket.on('connect_error', (err) => {
+        console.log('❌ Socket connection error:', err.message);
+      });
+
+      setSocket(newSocket);
+    } catch (err) {
+      console.error('Socket başlatılırken hata:', err);
+    }
+  };
 
   useEffect(() => {
     checkAuthStatus();
+    return () => {
+      if (socket) {
+        socket.disconnect();
+      }
+    };
   }, []);
 
   const checkAuthStatus = async () => {
@@ -170,6 +277,7 @@ export default function App() {
         // Token'ı sunucudan doğrula
         const response = await apiClient.get('/auth/me');
         setUser(response.data.data);
+        initializeSocket(token);
         setCurrentScreen('Home');
       } else {
         setCurrentScreen('Login');
@@ -185,17 +293,25 @@ export default function App() {
     }
   };
 
-  const handleLoginSuccess = (userObj) => {
+  const handleLoginSuccess = async (userObj) => {
     setUser(userObj);
+    const token = await SecureStore.getItemAsync('thrifty_token');
+    initializeSocket(token);
     setCurrentScreen('Home');
   };
 
-  const handleRegisterSuccess = (userObj) => {
+  const handleRegisterSuccess = async (userObj) => {
     setUser(userObj);
+    const token = await SecureStore.getItemAsync('thrifty_token');
+    initializeSocket(token);
     setCurrentScreen('Home');
   };
 
   const handleLogout = () => {
+    if (socket) {
+      socket.disconnect();
+      setSocket(null);
+    }
     setUser(null);
     setCurrentScreen('Login');
   };
@@ -234,6 +350,7 @@ export default function App() {
           <MainNavigator
             user={user}
             onLogout={handleLogout}
+            socket={socket}
           />
         )}
       </View>
