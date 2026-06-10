@@ -6,6 +6,7 @@ import HomePage from './pages/HomePage';
 import SharePage from './pages/SharePage';
 import ProfilePage from './pages/ProfilePage';
 import ListingDetailPage from './pages/ListingDetailPage';
+import RecommendationsPage from './pages/RecommendationsPage';
 import Navbar from './components/Navbar';
 import { useAuthStore } from './stores/useAuthStore';
 // Layout: Navbar + sayfa içeriği (auth gerektirmeyen sayfalarda da navbar göster)
@@ -109,6 +110,18 @@ function App() {
               element={
                 <Layout>
                   <ProfilePage />
+                </Layout>
+              }
+            />
+          }
+        />
+        <Route
+          path="/oneriler"
+          element={
+            <PrivateRoute
+              element={
+                <Layout>
+                  <RecommendationsPage />
                 </Layout>
               }
             />

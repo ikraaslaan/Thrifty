@@ -12,6 +12,7 @@ import ProfileScreen from './src/screens/ProfileScreen';
 import NotificationScreen from './src/screens/NotificationScreen';
 import ShareScreen from './src/screens/ShareScreen';
 import ChatScreen from './src/screens/ChatScreen';
+import RecommendationsScreen from './src/screens/RecommendationsScreen';
 
 function MainNavigator({ user, onLogout, socket }) {
   const [activeTab, setActiveTab] = useState('Home'); // 'Home', 'Share', 'Notifications', 'Messages', 'Profile'
@@ -127,6 +128,14 @@ function MainNavigator({ user, onLogout, socket }) {
               setActiveTab('Profile');
               setProfileSubTab('activeAds');
             }}
+            onStartChat={handleStartChat}
+            onRecommendationsPress={() => setActiveTab('Recommendations')}
+          />
+        )}
+        {activeTab === 'Recommendations' && (
+          <RecommendationsScreen
+            userProfile={user}
+            onBack={() => setActiveTab('Home')}
             onStartChat={handleStartChat}
           />
         )}

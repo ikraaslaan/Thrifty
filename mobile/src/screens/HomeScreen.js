@@ -43,7 +43,7 @@ const CONDITIONS = [
   { value: 'FAIR', label: 'Kullanılabilir' },
 ];
 
-export default function HomeScreen({ onLogout, userProfile, onProfilePress, onStartChat }) {
+export default function HomeScreen({ onLogout, userProfile, onProfilePress, onStartChat, onRecommendationsPress }) {
   const insets = useSafeAreaInsets();
   const [user, setUser] = useState(userProfile);
   const [items, setItems] = useState([]);
@@ -470,30 +470,57 @@ export default function HomeScreen({ onLogout, userProfile, onProfilePress, onSt
 
   // Footer / Sayfalama Bölümü
   const renderFooter = () => {
-    if (isLoading || filteredItems.length === 0) return null;
-    if (totalPages <= 1) return <View style={{ height: 40 }} />;
+    if (isLoading) return null;
 
     return (
-      <View style={styles.paginationContainer}>
-        <TouchableOpacity
-          style={[styles.pageButton, page === 1 && styles.pageButtonDisabled]}
-          disabled={page === 1}
-          onPress={() => setPage(p => Math.max(1, p - 1))}
-        >
-          <Text style={styles.pageButtonText}>← Önceki</Text>
-        </TouchableOpacity>
+      <View style={styles.footerContainer}>
+        {totalPages > 1 && (
+          <View style={styles.paginationContainer}>
+            <TouchableOpacity
+              style={[styles.pageButton, page === 1 && styles.pageButtonDisabled]}
+              disabled={page === 1}
+              onPress={() => setPage(p => Math.max(1, p - 1))}
+            >
+              <Text style={styles.pageButtonText}>← Önceki</Text>
+            </TouchableOpacity>
 
-        <Text style={styles.pageIndicator}>
-          {page} / {totalPages}
-        </Text>
+            <Text style={styles.pageIndicator}>
+              {page} / {totalPages}
+            </Text>
 
+            <TouchableOpacity
+              style={[styles.pageButton, page === totalPages && styles.pageButtonDisabled]}
+              disabled={page === totalPages}
+              onPress={() => setPage(p => Math.min(totalPages, p + 1))}
+            >
+              <Text style={styles.pageButtonText}>Sonraki →</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* ✨ Yapay Zeka Önerileri Banner'ı */}
         <TouchableOpacity
-          style={[styles.pageButton, page === totalPages && styles.pageButtonDisabled]}
-          disabled={page === totalPages}
-          onPress={() => setPage(p => Math.min(totalPages, p + 1))}
+          style={styles.aiBanner}
+          activeOpacity={0.9}
+          onPress={onRecommendationsPress}
         >
-          <Text style={styles.pageButtonText}>Sonraki →</Text>
+          <View style={styles.aiBannerContent}>
+            <View style={styles.aiBadgeContainer}>
+              <Text style={styles.aiBadgeText}>✨ YAPAY ZEKA EŞLEŞTİRMESİ</Text>
+            </View>
+            <Text style={styles.aiBannerTitle}>
+              Aradığın Eşyalar Yapay Zeka ile Karşına Çıksın!
+            </Text>
+            <Text style={styles.aiBannerSubtitle}>
+              Platformdaki aktif ilanlar ile profilindeki eşya talepleri Gemini yapay zekası tarafından akıllıca analiz edilir, sana özel gerekçeleriyle önerilir.
+            </Text>
+            
+            <View style={styles.aiBannerButton}>
+              <Text style={styles.aiBannerButtonText}>Önerileri Gör &rarr;</Text>
+            </View>
+          </View>
         </TouchableOpacity>
+        <View style={{ height: 40 }} />
       </View>
     );
   };
@@ -1750,6 +1777,73 @@ const styles = StyleSheet.create({
   detailMsgBtnText: {
     color: '#E05D3A',
     fontSize: 14,
+    fontWeight: '800',
+  },
+  footerContainer: {
+    paddingHorizontal: 16,
+    width: '100%',
+  },
+  aiBanner: {
+    marginTop: 20,
+    backgroundColor: '#2C2520',
+    borderRadius: 24,
+    padding: 20,
+    shadowColor: '#2C2520',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  aiBannerContent: {
+    alignItems: 'flex-start',
+  },
+  aiBadgeContainer: {
+    backgroundColor: 'rgba(224, 93, 58, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(224, 93, 58, 0.3)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 99,
+    marginBottom: 10,
+  },
+  aiBadgeText: {
+    color: '#F97316',
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  aiBannerTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '800',
+    lineHeight: 24,
+    marginBottom: 8,
+  },
+  aiBannerSubtitle: {
+    color: '#D1D5DB',
+    fontSize: 11,
+    lineHeight: 16,
+    marginBottom: 16,
+  },
+  aiBannerButton: {
+    backgroundColor: '#E05D3A',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'stretch',
+    shadowColor: '#E05D3A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  aiBannerButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
     fontWeight: '800',
   },
 });
